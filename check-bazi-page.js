@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const vm = require('vm');
 
 const html = fs.readFileSync('bazi.html', 'utf8');
-assert(html.includes('src="deepseek-client.js?v=20261105.1"') && html.includes('DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384'), 'Bazi AI should use the shared DeepSeek final-answer fallback');
+assert(html.includes('src="deepseek-client.js?v=20261105.4"') && html.includes('DeepSeekClient.requestFinal({messages:messages,maxTokens:4096'), 'Bazi AI should use the shared DeepSeek final-answer fallback');
 assert(!html.includes("model:'deepseek-chat'"), 'Bazi AI should not use the retired non-thinking model alias');
 assert(/href="index\.html">奇门<\/a>[\s\S]*href="bazi\.html" aria-current="page">八字<\/a>[\s\S]*href="liuyao\.html">六爻<\/a>[\s\S]*href="ziwei\.html">紫微<\/a>[\s\S]*href="daily\.html">日运<\/a>/.test(html), 'Bazi should expose the unified five-module navigation');
 

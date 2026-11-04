@@ -124,6 +124,8 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 }
 </style>
 <link rel="stylesheet" href="liuyao-premium.css?v=20261101.1">
+<link rel="canonical" href="https://qimenbazi.cn/liuyao.html">
+<script src="site-analytics.js?v=20261105.1"></script>
 </head>
 <body class="standard">
 <a class="skip" href="#main">跳到主要内容</a>
@@ -307,10 +309,11 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 <script src="liuyao-engine.js?v=20261101.1"></script>
 <script src="liuyao-usegod.js?v=20261105.1"></script>
 <script src="liuyao-verdict.js?v=20261105.1"></script>
-<script src="site-notice.js?v=20261105.1"></script>
-<script src="deepseek-client.js?v=20261105.1"></script>
+<script src="site-notice.js?v=20261105.2"></script>
+<script src="deepseek-client.js?v=20261105.4"></script>
+<script src="vendor/qrcode-generator.js"></script>
+<script src="site-service.js?v=20261105.4"></script>
 <script>
-var API_KEY_STORAGE='qimen_deepseek_api_key';
 var RECORDS_STORAGE='liuyao_records_v1';
 var DISPLAY_STORAGE='liuyao_display_mode';
 var TEXT_SIZE_STORAGE='liuyao_large_text';
@@ -557,6 +560,7 @@ function finishCast(source,lines,meta,extra){
   if(extra&&extra.tosses)currentRecord.tosses=extra.tosses;if(extra&&extra.meihua)currentRecord.meihua=extra.meihua;
   lockForm(false);document.getElementById('btnStep').textContent='逐爻摇卦';renderPlate();updateFlow();if(persistCurrent('questionSummaryStatus'))setStatus('questionSummaryStatus','已自动保存');
   document.getElementById('plateCard').scrollIntoView({behavior:'smooth',block:'start'});
+  if (typeof SiteAnalytics !== 'undefined') SiteAnalytics.track('排盘完成');
 }
 function readRecords(statusId){
   try{var value=JSON.parse(localStorage.getItem(RECORDS_STORAGE)||'[]');return Array.isArray(value)?value:[]}
@@ -724,13 +728,10 @@ function useGodAiMessages(){
 }
 async function requestUseGodAi(){
   if(!currentRecord||!currentPlate||useGodAiBusy)return;
-  var key='';try{key=localStorage.getItem(API_KEY_STORAGE)||''}catch(error){}
-  if(!key){key=(window.prompt&&prompt('请输入 DeepSeek API Key（只保存在本机浏览器；不填也可以用上面的问答或手动选择）'))||'';if(key.trim())try{localStorage.setItem(API_KEY_STORAGE,key.trim())}catch(error){}}
-  if(!key.trim()){setStatus('useGodAiStatus','未填写 DeepSeek API Key：可以继续用上面的问答，或在下方手动选择',true);return}
   if(typeof DeepSeekClient==='undefined'){setStatus('useGodAiStatus','AI 客户端未加载，请用问答或手动选择',true);return}
   var recordId=currentRecord.id;useGodAiBusy=true;refreshUseGodWhy();setStatus('useGodAiStatus','正在请 AI 判断用神类别…');
   try{
-    var result=await DeepSeekClient.requestFinal({apiKey:key.trim(),messages:useGodAiMessages(),maxTokens:4096});
+    var result=await DeepSeekClient.requestFinal({messages:useGodAiMessages(),maxTokens:4096});
     if(!currentRecord||currentRecord.id!==recordId)return;
     var parsed=LiuyaoUseGod.parseAiSuggestion(result.answer);
     if(!parsed.valid)throw new Error('AI 返回未通过校验：'+parsed.errors.join('；'));
@@ -1057,9 +1058,6 @@ async function analyzeWithAI(){
   if(!currentRecord||!currentPlate)return;
   var follow=document.getElementById('aiQuestion').value.trim()||currentRecord.question;
   var kernel;try{kernel=buildAiKernelContext(null,follow)}catch(error){setStatus('aiStatus',error.message,true);return}
-  var key=localStorage.getItem(API_KEY_STORAGE)||'';
-  if(!key){key=prompt('请输入 DeepSeek API Key（只保存在本机浏览器）')||'';if(key.trim())localStorage.setItem(API_KEY_STORAGE,key.trim())}
-  if(!key.trim()){setStatus('aiStatus','未填写 DeepSeek API Key',true);return}
   var requestId=++aiRequestSeq,recordIdAtStart=currentRecord.id,useGodKeyAtStart=useGodSnapshotKey(kernel.fixedUseGod),button=document.getElementById('btnAI'),keepAIStatus=false;button.disabled=true;button.textContent='分析中…';setStatus('aiStatus','正在核对用神、世应、日月和动变');
   var system='你是谨慎的传统纳甲六爻解释员。程序已经完成排盘、固定用神和规则判断，你只能解释给出的内核结果，不得重新选择用神、重新计算旺衰或创造盘面关系。历史回答只用于保持同一问题的语义，若其中用神与本次 fixedUseGod 不同，必须忽略旧用神。一个卦只回答同一人、同一事、同一决策的连续追问；若用户换了问题，只回复“一个卦只能问同一件事，请重新起卦”。涉及盘面的判断必须引用 evidenceCatalog 中存在的编号，格式如 [U01]；必须原样写出 useGodAssessment.arbitration.label，并明确写出固定用神的爻位、六亲和干支。不得虚构动爻、六亲、纳甲、世应、旬空、月破、旺衰或应期，不得用吉凶分数。回答依次包含：结论与倾向、固定用神、支持证据、反向证据、世应日月动变、可能应期条件、不确定处、现实行动建议。医疗、法律和高风险投资只能提供传统象意与风险提示，不得替代专业意见。';
   system+=' 请明确区分求测人与问题涉及的人。已有固定用神时遵从该用神；若主体信息存在歧义，应提示人工确认。arbitration.decisiveRule 非空时，必须解释该优先规则及其限制，不能用已降为条件的生扶推翻它。世爻、应爻、用神与爻位、六亲和干支必须逐一对应，不能将同一证据中的不同爻交换。应期只能写成带条件的可能性，不得承诺一定成功、必定到账等现实结果。';
@@ -1074,17 +1072,10 @@ async function analyzeWithAI(){
   }).forEach(function(turn){messages.push({role:'user',content:turn.question});messages.push({role:'assistant',content:turn.answer})});
   messages.push({role:'user',content:'本卦原始问题：'+currentRecord.question+'\n本次问题：'+follow+'\n固定用神：'+kernel.fixedUseGod.lineLabel+' '+(kernel.fixedUseGod.hidden?'伏神 ':'')+kernel.fixedUseGod.relative+kernel.fixedUseGod.stemBranch+'。'+(kernel.fixedUseGod.confirmed?'用户已确认，不得改选。':'系统规则候选尚未人工确认，仍不得在本次回答中改选；请提示用户可在页面手动纠正。')+'\n规则内核与证据目录（JSON）：\n'+aiPlateContext(kernel)});
   try{
-    var result=await DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384,onRetry:function(){setStatus('aiStatus','思考已完成，正在获取最终解读')}});
+    var result=await DeepSeekClient.requestFinal({messages:messages,maxTokens:4096});
     if(requestId!==aiRequestSeq||!currentRecord||currentRecord.id!==recordIdAtStart||useGodSnapshotKey(activeUseGod())!==useGodKeyAtStart)return;
     var answer=result.answer,validation=validateLiuyaoAiAnswer(answer,kernel);
-    if(!validation.valid){
-      setStatus('aiStatus','初稿未通过盘面校验，正在纠正');
-      var retryMessages=messages.concat(kernel.highRisk?[]:[{role:'assistant',content:answer}]).concat([{role:'user',content:'上面的草稿未通过本地校验：'+validation.errors.join('；')+'。请不要增加新事实，按 fixedUseGod 和 evidenceCatalog 重新完整回答。'}]);
-      result=await DeepSeekClient.requestFinal({apiKey:key,messages:retryMessages,maxTokens:16384,onRetry:function(){setStatus('aiStatus','正在获取纠正后的最终解读')}});
-      if(requestId!==aiRequestSeq||!currentRecord||currentRecord.id!==recordIdAtStart||useGodSnapshotKey(activeUseGod())!==useGodKeyAtStart)return;
-      answer=result.answer;validation=validateLiuyaoAiAnswer(answer,kernel);
-    }
-    if(!validation.valid)throw new Error('AI 回答未通过盘面校验：'+validation.errors.join('；')+'。本次内容未保存');
+    if(!validation.valid)throw new Error('AI 回答未通过盘面校验：'+validation.errors.join('；')+'。本次内容未保存，重试会消耗额度');
     if(kernel.highRisk)answer=validation.answer;
     currentRecord.aiHistory=currentRecord.aiHistory||[];currentRecord.aiHistory.push({question:follow,answer:answer.trim().replace(/\*\*/g,''),createdAt:new Date().toISOString(),kernelVersion:kernel.assessment.version,useGodSnapshot:kernel.fixedUseGod,evidenceRefs:validation.references});if(!persistCurrent('aiStatus'))keepAIStatus=true;currentPlateFocus='useGod';renderPlate();setStatus('useGodStatus',kernel.fixedUseGod.confirmed?'AI 已按已确认用神完成证据编号核对':'AI 已按高置信系统候选用神完成证据编号核对，仍可手动纠正');
   }catch(error){if(requestId===aiRequestSeq){keepAIStatus=true;setStatus('aiStatus','AI 请求失败：'+error.message,true)}}

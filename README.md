@@ -1,33 +1,28 @@
 # 奇门八字
 
-奇门、八字、六爻、紫微排盘的传统文化学习工具，排盘免费，AI 解读仅作学习参考。
+奇门、八字、六爻、紫微排盘与日运记录的传统文化学习工具。排盘免费，AI 解读每日有免费额度，仅供学习参考，不作为医疗、法律或投资决策依据。
 
 - 在线使用：https://xulei1280-rgb.github.io/qimen-online/
 - 支持作者（爱发电）：https://afdian.com/a/qimenbazi
 
-## GitHub Pages
+## 开发说明
 
-这是纯静态网页，发布到 GitHub Pages 时直接使用仓库根目录即可：
+前端是纯静态 HTML/JS，无框架。Worker 使用 Cloudflare D1；测试需 Node 24，无需安装依赖。
 
-- Branch: `main`
-- Folder: `/ (root)`
+在仓库根目录运行全部检查：
 
-入口文件是 `index.html`。
-
-## API Key
-
-DeepSeek API Key 不写入源码。首次在新浏览器或手机上使用 AI 分析时，页面会提示输入 Key，并只保存到当前设备浏览器的 `localStorage`。
-
-## 校验
-
-修改排盘逻辑后先运行：
-
-```bash
-node check-baselines.js
+```sh
+for file in check-*.js check-*.cjs; do
+  node "$file" || exit 1
+done
 ```
 
-当前基准盘通过时会输出：
+浏览器检查使用现有 Playwright 环境；未提供时会明确输出 SKIP。
 
-```text
-18 baselines ok
+运行 Worker 测试：
+
+```sh
+cd worker && node --test test/*.test.js
 ```
+
+部署、域名、API 配置与 Umami 启用步骤见 [worker/DEPLOY.md](worker/DEPLOY.md)。

@@ -37,7 +37,7 @@ async function checkQimen() {
     document: { getElementById: element }, plateData: plate, aiHistory: [], aiTopic: null,
     qimenAiRequestSeq: 0, aiCollapsed: {}, plateInputFingerprint: 'same',
     AUTO_HISTORY_STORAGE: 'auto', SAVED_HISTORY_STORAGE: 'saved',
-    getRecords: () => [oldRecord], getLongitude: () => 120, getApiKey: () => 'test-only',
+    getRecords: () => [oldRecord], getLongitude: () => 120,
     currentPlateInputFingerprint: () => 'same', ensureCurrentPlate: () => true,
     getPalaceMarks: () => [], palaceStemText: () => '', getRiskWarnings: () => [],
     getJieQiNote: () => '', buildQimenBaziContext: () => '', cloneQimenBazi: () => null,
@@ -77,7 +77,7 @@ async function checkLiuyao() {
     LiuyaoEngine: engine, LiuyaoVerdict: verdict, LiuyaoUseGod: useGod, currentPlate: plate,
     activeUseGod: () => selected, currentVerdict: null, aiRequestSeq: 0,
     document: { getElementById: id => nodes.get(id) },
-    localStorage: { getItem: () => 'test-only' }, API_KEY_STORAGE: 'key', TOPIC_LABELS: {},
+    TOPIC_LABELS: {},
     esc: String, nl: String, setStatus() {}, persistCurrent: () => true, renderPlate() {},
     useGodSnapshotKey: item => String(item.position) + '|' + String(item.relative),
     DeepSeekClient: { async requestFinal(options) {
@@ -143,9 +143,9 @@ async function checkConsent() {
     const footers = [];
     const context = {
       document: { readyState: 'complete', createElement: () => ({}), head: { appendChild() {} }, body: { appendChild(item) { footers.push(item); } } },
-      localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) },
+      localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
       confirm: message => { dialogs.push(message); return accept; },
-      async fetch() { sends++; return { ok: true, async json() { return { choices: [{ message: { content: 'test' } }] }; } }; }
+      async fetch(url) { if (url.endsWith('/api/credential')) return { ok: true, async json() { return { credential: 'a'.repeat(64) }; } }; sends++; return { ok: true, async json() { return { choices: [{ message: { content: 'test' } }] }; } }; }
     };
     context.window = context;
     vm.createContext(context);
@@ -153,27 +153,29 @@ async function checkConsent() {
     vm.runInContext(read('deepseek-client.js'), context);
     assert.ok(footers[0].innerHTML.includes('使用与数据说明'));
     assert.equal((footers[0].innerHTML.match(/<li>/g) || []).length, 3);
-    assert.doesNotMatch(footers[0].innerHTML, /反馈内容|联系方式|订单记录|不收集个人信息/);
+    assert.doesNotMatch(footers[0].innerHTML, /不收集个人信息/);
+    assert.match(footers[0].innerHTML, /经本站服务转发给 DeepSeek/);
+    for (const text of ['反馈内容', '联系方式', '订单记录']) assert.ok(footers[0].innerHTML.includes(text));
     return context;
   }
   for (const page of pages) {
-    assert.ok(read(page).includes('site-notice.js?v=20261105.1'));
-    await loadPage().DeepSeekClient.requestFinal({ apiKey: 'test-only' });
+    assert.ok(read(page).includes('site-notice.js?v=20261105.2'));
+    await loadPage().DeepSeekClient.requestFinal({});
   }
   assert.equal(dialogs.length, 1);
   assert.equal(sends, 5);
-  await loadPage().DeepSeekClient.requestFinal({ apiKey: 'test-only', includeDiary: true });
-  await loadPage().DeepSeekClient.requestFinal({ apiKey: 'test-only', includeDiary: true });
+  await loadPage().DeepSeekClient.requestFinal({ includeDiary: true });
+  await loadPage().DeepSeekClient.requestFinal({ includeDiary: true });
   assert.equal(dialogs.length, 2);
   assert.ok(dialogs[1].includes('将同时发送所勾选的日记内容'));
   storage.clear(); dialogs.length = 0;
-  await loadPage().DeepSeekClient.requestFinal({ apiKey: 'test-only', includeDiary: true });
+  await loadPage().DeepSeekClient.requestFinal({ includeDiary: true });
   assert.equal(dialogs.length, 1);
   assert.ok(dialogs[0].includes('盘面和问题将发送至 DeepSeek'));
   assert.ok(dialogs[0].includes('将同时发送所勾选的日记内容'));
   storage.clear(); accept = false;
   const before = sends;
-  await assert.rejects(loadPage().DeepSeekClient.requestFinal({ apiKey: 'test-only', includeDiary: true }), /已取消发送/);
+  await assert.rejects(loadPage().DeepSeekClient.requestFinal({ includeDiary: true }), /已取消发送/);
   assert.equal(sends, before);
   assert.equal(storage.size, 0);
   console.log('PASS P0-7 shared cross-page consent, diary scope, combined dialog and denial without network');

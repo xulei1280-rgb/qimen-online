@@ -1141,6 +1141,8 @@
   </style>
   <link rel="stylesheet" href="premium-base.css?v=20261101.2">
   <link rel="stylesheet" href="ziwei-premium.css?v=20261102.10">
+<link rel="canonical" href="https://qimenbazi.cn/ziwei.html">
+<script src="site-analytics.js?v=20261105.1"></script>
 </head>
 <body class="zw">
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -1358,7 +1360,6 @@
               <h2 id="ai-title">AI 连续追问</h2>
               <p>仅解释冻结盘面；如已选择运限，每条回答同时固定当时运限。</p>
             </div>
-            <div class="ai-header-tools"><button class="button api-key-button" id="openApiKey" type="button" aria-haspopup="dialog" aria-controls="apiKeyDialog">设置 API Key</button></div>
           </div>
 
           <div class="conversation" id="conversation" aria-live="polite"></div>
@@ -1414,16 +1415,6 @@
     </details>
   </main>
 
-  <dialog id="apiKeyDialog" aria-labelledby="api-key-title">
-    <div class="dialog-body">
-      <h2 id="api-key-title">DeepSeek API Key</h2>
-      <p class="privacy-note">与其他模块共用本机 Key，仅保存到当前浏览器。</p>
-      <label class="field"><span>API Key</span><input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
-      <p class="privacy-note" id="apiKeyStatus" role="alert"></p>
-      <div class="button-row"><button class="button primary" id="saveApiKey" type="button">保存到本机</button><button class="button" id="closeApiKey" type="button">关闭</button></div>
-    </div>
-  </dialog>
-
   <dialog id="timeConfirmDialog" aria-labelledby="time-confirm-title">
     <div class="dialog-body">
       <h2 id="time-confirm-title">真太阳时跨越时辰</h2>
@@ -1443,9 +1434,11 @@
 
   <script src="vendor/iztro/2.5.8/iztro.min.js"></script>
   <script src="ziwei-engine.js?v=20261102.1"></script>
-  <script src="site-notice.js?v=20261105.1"></script>
-  <script src="deepseek-client.js?v=20261105.1"></script>
-  <script src="ziwei-page.js?v=20261105.1"></script>
+  <script src="site-notice.js?v=20261105.2"></script>
+  <script src="deepseek-client.js?v=20261105.4"></script>
+  <script src="vendor/qrcode-generator.js"></script>
+  <script src="site-service.js?v=20261105.4"></script>
+  <script src="ziwei-page.js?v=20261105.4"></script>
   <script src="premium-base.js?v=20261101.2"></script>
   <script src="ziwei-premium.js?v=20261102.5"></script>
   <script src="ziwei-glossary.js?v=20261102.2"></script>

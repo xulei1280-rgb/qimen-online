@@ -7,6 +7,8 @@
 <meta name="description" content="演示传统奇门遁甲排盘与盘面解读，供传统文化学习参考。">
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
 <link rel="stylesheet" href="qimen-premium.css?v=20261102.3">
+<link rel="canonical" href="https://qimenbazi.cn/">
+<script src="site-analytics.js?v=20261105.1"></script>
 </head>
 <body>
 <main class="page qm-page">
@@ -135,7 +137,6 @@
     <section class="qm-card qm-ask" id="qmAsk" aria-labelledby="qmAskTitle">
       <div class="qm-card-head">
         <h2 class="qm-title" id="qmAskTitle">问事 · AI 断事</h2>
-        <button type="button" class="qm-ghost qm-key" onclick="manageApiKey()" title="设置或清除本机保存的 DeepSeek API Key">API Key</button>
       </div>
       <div class="tool-row">
         <label class="tool-field">
@@ -211,8 +212,10 @@
 
 <script src="qimen.js?v=20260703-jieqi1"></script>
 <script src="bazi-engine.js?v=20261105.1"></script>
-<script src="site-notice.js?v=20261105.1"></script>
-<script src="deepseek-client.js?v=20261105.1"></script>
+<script src="site-notice.js?v=20261105.2"></script>
+<script src="deepseek-client.js?v=20261105.4"></script>
+<script src="vendor/qrcode-generator.js"></script>
+<script src="site-service.js?v=20261105.4"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="qimen-premium.js?v=20261101.2" defer></script>
 <script>
@@ -222,7 +225,6 @@ var aiCollapsed={};
 var aiTopic=null;
 var currentAutoHistoryId=null;
 var currentSavedHistoryId=null;
-var API_KEY_STORAGE='qimen_deepseek_api_key';
 var AUTO_HISTORY_STORAGE='qimen_auto_history';
 var SAVED_HISTORY_STORAGE='qimen_history';
 var AI_MODE_STORAGE='qimen_ai_mode';
@@ -546,23 +548,6 @@ function esc(v){
   });
 }
 function br(v){return esc(v).replace(/\n/g,'<br>')}
-function getApiKey(){
-  var key=localStorage.getItem(API_KEY_STORAGE)||'';
-  if(!key){
-    key=prompt('请输入 DeepSeek API Key（只保存在本机浏览器 localStorage）：','')||'';
-    key=key.trim();
-    if(key)localStorage.setItem(API_KEY_STORAGE,key);
-  }
-  return key;
-}
-function manageApiKey(){
-  var old=localStorage.getItem(API_KEY_STORAGE)||'';
-  var msg=old?'已保存 Key。输入新 Key 可替换；留空并确定则清除。':'请输入 DeepSeek API Key（只保存在本机浏览器）：';
-  var key=prompt(msg,old)||'';
-  key=key.trim();
-  if(key){localStorage.setItem(API_KEY_STORAGE,key);alert('DeepSeek API Key 已保存到本机浏览器。')}
-  else if(old&&confirm('清除本机保存的 DeepSeek API Key？')){localStorage.removeItem(API_KEY_STORAGE);alert('已清除。')}
-}
 
 function getJieQiNote(t){
   if(typeof JIE_QI_DATA==='undefined')return '';
@@ -780,6 +765,7 @@ function doPaiPan(opts){
   renderStatus(plateData,note);
   document.getElementById('infoPanel').innerHTML='<div class="title">排盘完成 · 点击宫位查看详情</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+renderAssistInfo(plateData,note)+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
   if(!opts.skipRecord)addAutoHistory();
+  if (typeof SiteAnalytics !== 'undefined') SiteAnalytics.track('排盘完成');
 }
 
 function renderPlate(data){
@@ -1003,8 +989,6 @@ async function analyzeWithAI(){
   if(!ensureCurrentPlate())return;
   var question=document.getElementById('question').value.trim();
   if(!question){alert('请输入你想问的事情');return}
-  var apiKey=getApiKey();
-  if(!apiKey){alert('未填写 DeepSeek API Key');return}
   var aiRequestId=++qimenAiRequestSeq;
   var aiRequestFingerprint=plateInputFingerprint;
   var gender=document.getElementById('gender').value;
@@ -1045,7 +1029,7 @@ async function analyzeWithAI(){
   aiBtn.textContent='分析中 · '+getAiModeLabel(aiMode);
   showQimenAiPending(aiRequestId);
   try{
-    var result=await DeepSeekClient.requestFinal({apiKey:apiKey,messages:messages,maxTokens:16384,onRetry:function(){aiBtn.textContent='正在获取最终回答…'}});
+    var result=await DeepSeekClient.requestFinal({messages:messages,maxTokens:4096});
     if(aiRequestId!==qimenAiRequestSeq||aiRequestFingerprint!==plateInputFingerprint||currentPlateInputFingerprint()!==plateInputFingerprint)return;
     var answer=result.answer;
     if(answer){

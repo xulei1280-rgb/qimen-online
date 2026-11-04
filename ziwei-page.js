@@ -3,7 +3,6 @@
 
   const engine = window.ZiweiEngine;
   const STORAGE_KEY = "ziwei_records_v1";
-  const API_KEY_STORAGE = "qimen_deepseek_api_key";
   const THEME_STORAGE_KEY = "ziwei_theme_v1";
   const DENSITY_STORAGE_KEY = "ziwei_density_v1";
   const AI_MODEL = window.DeepSeekClient.MODEL;
@@ -147,8 +146,6 @@
     horoscopeButton: $("horoscopeButton"),
     horoscopeState: $("horoscopeState"),
     horoscopeSummary: $("horoscopeSummary"),
-    apiKey: $("apiKey"),
-    saveApiKey: $("saveApiKey"),
     conversation: $("conversation"),
     aiForm: $("aiForm"),
     aiMode: $("aiMode"),
@@ -470,6 +467,7 @@
       elements.inputState.className = "input-state";
       setStatus(saved ? "命盘已保存到本地；修改会更新同一份记录，另起一份请点击“新建命盘”。" : "命盘仅供预览，尚未保存；可点击“保存命盘”，AI 解读前也会自动保存。", "success");
       elements.chartPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (window.SiteAnalytics) window.SiteAnalytics.track("排盘完成");
     } catch (error) {
       if (error.code === "TIME_BRANCH_CONFIRMATION_REQUIRED") {
         state.pendingBirthInput = input;
@@ -1173,7 +1171,7 @@
     return lines.slice(start + 1, next < 0 ? lines.length : next).join("\n");
   }
 
-  // 硬性：引用不存在的编号、整篇没有任何编号 → 拒绝。其余只是格式/依据不全 → 重写一次，仍不全就带“仅供参考”标记显示并保存。
+  // 硬性：引用不存在的编号、整篇没有任何编号 → 拒绝。其余格式/依据不全带“仅供参考”标记显示并保存，不自动重试。
   function validateAiAnswer(rawAnswer, evidence) {
     const answer = normalizeAiAnswer(rawAnswer);
     const hardErrors = [];
@@ -1248,19 +1246,14 @@
   }
 
   async function requestAiCompletion(messages) {
-    const apiKey = elements.apiKey.value.trim();
     const result = await window.DeepSeekClient.requestFinal({
-      apiKey,
       messages,
-      maxTokens: 16384,
-      onRetry() { elements.aiState.textContent = "思考已完成，正在获取最终回答…"; },
+      maxTokens: 4096,
     });
     return result.answer;
   }
 
   async function askAi(question) {
-    const apiKey = elements.apiKey.value.trim();
-    if (!apiKey) throw new Error("请先填写并保存 DeepSeek API Key。");
     if (!state.snapshot) throw new Error("请先排出本命盘。");
     if (state.dirtyBirth) throw new Error("出生资料已修改，请先更新命盘，再进行 AI 解读。");
     const mode = normalizeAiMode(elements.aiMode.value);
@@ -1273,14 +1266,7 @@
     const messages = buildAiMessages(question, record.aiHistory, state.snapshot, horoscope, state.selectedPalaceIndex, mode, style);
     let answer = await requestAiCompletion(messages);
     let validation = validateAiAnswer(answer, evidence);
-    if (!validation.valid) {
-      elements.aiState.textContent = "回答格式不完整，正在请 AI 按格式重写一次…";
-      const retry = await requestAiCompletion([...messages, { role: "assistant", content: answer }, { role: "user", content: `上面的草稿未通过本地校验：${validation.errors.join("；")}。请不要增加任何新事实，重新严格按六个标题用白话输出，正文不写证据编号，并在“## 依据”里按示例逐行列出编号，只引用证据目录中的编号。` }]);
-      const retried = validateAiAnswer(retry, evidence);
-      // 重写后若更差（出现硬性问题）而原稿只是格式问题，就保留原稿。
-      if (!retried.hard || validation.hard) { answer = retry; validation = retried; }
-    }
-    if (validation.hard) throw new Error(`AI 回答引用了无法核对的依据（${validation.hardErrors.join("；")}），已拒绝保存，请重新提问。`);
+    if (validation.hard) throw new Error(`AI 回答引用了无法核对的依据（${validation.hardErrors.join("；")}），已拒绝保存；重试会消耗额度。`);
     answer = validation.answer;
     const now = new Date().toISOString();
     const turn = {
@@ -1523,18 +1509,6 @@
     elements.timeConfirmDialog.close();
     buildFromForm(true);
   });
-  $("openApiKey").addEventListener("click", () => { $("apiKeyStatus").textContent = ""; $("apiKeyDialog").showModal(); });
-  $("closeApiKey").addEventListener("click", () => $("apiKeyDialog").close());
-  elements.saveApiKey.addEventListener("click", () => {
-    try {
-      localStorage.setItem(API_KEY_STORAGE, elements.apiKey.value.trim());
-      $("apiKeyDialog").close();
-      setStatus("DeepSeek API Key 已保存到当前浏览器，不会导出。", "success");
-    } catch (error) {
-      $("apiKeyStatus").textContent = `API Key 保存失败：${error.message}`;
-      setStatus(`API Key 保存失败：${error.message}`, "error");
-    }
-  });
   elements.aiMode.addEventListener("change", renderAiPresetQuestions);
   elements.aiStyle.addEventListener("change", renderAiPresetQuestions);
   elements.aiForm.addEventListener("submit", async (event) => {
@@ -1542,7 +1516,7 @@
     const question = elements.aiQuestion.value.trim();
     if (!question) return;
     elements.askAi.disabled = true;
-    elements.aiState.textContent = "正在请求 deepseek-v4-flash（思考）…";
+    elements.aiState.textContent = "正在请求本站 AI 服务…";
     try {
       const turn = await askAi(question);
       elements.aiQuestion.value = "";
@@ -1570,14 +1544,12 @@
   elements.lunarMonth.value = "1";
   elements.lunarDay.value = "1";
   elements.targetDate.value = todayText();
-  try { elements.apiKey.value = localStorage.getItem(API_KEY_STORAGE) || ""; } catch (_) { /* shown on save */ }
   renderLocations();
   syncConditionalFields();
   renderRecords();
 
   window.ZiweiPageTest = Object.freeze({
     STORAGE_KEY,
-    API_KEY_STORAGE,
     THEME_STORAGE_KEY,
     DENSITY_STORAGE_KEY,
     AI_MODEL,

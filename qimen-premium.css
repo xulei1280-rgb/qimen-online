@@ -377,7 +377,6 @@ input[type=checkbox]{accent-color:var(--pm-gold-deep);width:16px;height:16px}
 }
 #btnAI:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 20px 34px -18px rgba(20,14,6,.75)}
 #btnAI:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
-.qm-key{min-height:34px;padding:0 12px;border-radius:999px;font-size:12px}
 
 /* ---------- 解读区（info-panel） ---------- */
 .info-panel{padding:20px 22px;font-size:14px;line-height:1.8;color:var(--pm-text);min-height:80px}

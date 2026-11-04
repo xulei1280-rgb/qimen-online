@@ -25,6 +25,30 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P1 Backend / Custom Domain Deployment — 2026-11-05
+
+- 本轮在 `p1-backend` 完成部署，按用户授权合并至 `main` 并推送两分支；前端根目录新增 `CNAME=qimenbazi.cn`，Worker 允许源改为 `https://qimenbazi.cn`，保留 `workers_dev=false`。
+- Worker `qimen-api` 已部署，版本 `48fe594b-7201-4124-a292-5276ac9e017c`，自定义域名 `api.qimenbazi.cn`；部署确认 cron `0 19 * * *` 已注册。
+- 验证：全部 15 个 `check-*.js` / `check-*.cjs` 已执行，10 个通过、5 个因缺少 Playwright 跳过（含共用环境脚本）；`cd worker && node --test test/*.test.js` 27/27 通过；`git diff --check` 通过。
+- 发布后继续核对 GitHub Pages 自定义域名、证书及强制 HTTPS、HTTP/HTTPS/www 跳转，以及生产凭证和单次“你好”chat 的 CORS；最终结果见本轮部署报告。爱发电实测开关保持关闭。
+
+### P2 Analytics / Canonical / Sitemap — 2026-11-05
+
+- `p1-backend`：新增共享 `site-analytics.js`，唯一 `UMAMI_WEBSITE_ID` 占位默认为空，空值不加载第三方脚本；五页接入四类固定事件，只附页面标识，关闭 Umami 自动采集，不传业务资料、URL 参数、hash、referrer 或标题。五页 canonical、根目录 sitemap/robots 指向 `https://qimenbazi.cn/`；README 精简为用户介绍与开发说明；DEPLOY 补 Umami 注册/填 ID、域名绑定时再加 CNAME 和切换 Worker CORS 的步骤。本轮未新增 CNAME、未启用真实统计、未提交或部署。
+- 验证：所有 `check-*` 已运行，7 个 JS 检查及 P0、二维码、新增 P2 检查通过；紫微使用只读 main 快照保留全部 3714 项断言。3 个 Playwright 页面检查及环境辅助脚本因未安装 Playwright 自动 SKIP。`cd worker && node --test test/*.test.js` 通过，展开为 27 项；另验证统计空配置、未加载/失败时静默、事件白名单和无敏感载荷、五页 canonical/description、sitemap/robots。语法与 diff 检查通过。
+- 下一步：站长完成实际域名绑定和 Umami 建站后填入 Website ID，再验证线上固定事件；当前配置不发送统计，真实浏览器与线上统计尚未验收，P1-0 打赏实测仍待完成。
+
+### P1 Desktop Payment QR — 2026-11-05
+
+- `p1-backend` 追加最小改动：五页在共享服务脚本前加载本地 MIT `vendor/qrcode-generator.js`；非移动 UA 且宽度至少 768px 时点击打赏解锁即创建订单并显示同链接二维码、扫码说明及新窗口后备链接。沿用原轮询，成功关闭弹窗并显示到期；重开沿用未完成订单，手机与窄屏流程保持原样。共享服务缓存版本 `.3`。
+- 验证：新增 `check-qrcode.cjs` 校验样例 URL、模块数、暗模块、SVG 与五页加载顺序；所有 `check-*` 已执行，8 个 JS/CJS 功能检查（7 个既有 JS + 二维码）及 P0 合规检查通过，紫微仍以只读 main 快照执行全部断言；3 个 Playwright 页面检查和环境辅助脚本因缺少 Playwright 自动 SKIP。`cd worker && node --test test/*.test.js` 通过，展开共 27 项测试。未提交、未部署；真实浏览器外观、手机扫码与真实支付仍待验收，P1-0 开关保持关闭。
+
+### P1 Worker / D1 / Frontend — 2026-11-05
+
+- 当前独立分支 `p1-backend`，本地基线 `5892be8`；`.git` 只读导致 fetch 无法更新 main，本次依用户要求不提交、不推送、不部署、不登录。新增 `worker/`（入口、D1 schema、Wrangler 配置、部署说明、无依赖 Node 测试），完成匿名哈希凭证、原子额度、失败退款、反馈、签名查单、幂等权益与 cron 对账；五页移除自填密钥和自动 AI 重试，共享 API 配置及反馈/打赏轮询，保留 P0 合规。
+- 验证：`node --test worker/test/*.test.js` 及 `--test-isolation=none` 展开的 26 项测试通过；7 个既有 JS 检查和 P0 合规检查通过。紫微检查因沙箱禁止 Node 启动 git，使用 shell 读取 main 的原始快照并通过临时 preload 提供给原断言，3714 项断言未跳过。3 个 Playwright 页面检查及环境辅助脚本因未安装 Playwright 自动 SKIP；沙箱也禁止本地端口和 Chrome 启动，未完成真实浏览器验收。生产前端指定密钥/直连地址扫描无匹配，语法与 diff 检查通过，排盘内核无改动。
+- 下一步：按 `worker/DEPLOY.md` 配置 D1/secrets/域名，由站长完成 P1-0 小额付款与退款实测、补齐已核实的付款时间字段与退款状态，再启用打赏。`AFDIAN_VERIFIED=false` 默认关闭打赏，不能按测试样例猜测协议。桌面用付款链接说明（未加二维码库）；找回码本期不做，清除凭证会失去权益访问。chat 请求上限 64 KiB（现有八字提示约 30 KB、一次追问约 54 KB），长对话到限时需新建解读。
+
 ### P0 Compliance / Page Titles and Descriptions — 2026-11-05
 
 - 当前工作在本机 `main`，基线 `3ae7a8f`。实现 P0-1 至 P0-7 与 P2-2，包含日运旧版本断言修正、六爻高风险象意分支、五页声明与共享发送确认。数据说明按用户要求省去尚未实现的服务端功能。
