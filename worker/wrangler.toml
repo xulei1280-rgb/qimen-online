@@ -1,13 +1,14 @@
 name = "qimen-api"
 main = "src/index.js"
-compatibility_date = "2026-11-05"
+compatibility_date = "2026-11-04"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
+routes = [{ pattern = "api.qimenbazi.cn", custom_domain = true }]
 
 [[d1_databases]]
 binding = "DB"
 database_name = "qimen"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "d60c4fee-6b2a-4fc0-8015-d3d74c18e557"
 
 [vars]
 AFDIAN_USER_ID = "ce5512ded87411f1a31d52540025c377"
