@@ -25,6 +25,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P2 Analytics / Canonical / Sitemap — 2026-11-05
+
+- `p1-backend`：新增共享 `site-analytics.js`，唯一 `UMAMI_WEBSITE_ID` 占位默认为空，空值不加载第三方脚本；五页接入四类固定事件，只附页面标识，关闭 Umami 自动采集，不传业务资料、URL 参数、hash、referrer 或标题。五页 canonical、根目录 sitemap/robots 指向 `https://qimenbazi.cn/`；README 精简为用户介绍与开发说明；DEPLOY 补 Umami 注册/填 ID、域名绑定时再加 CNAME 和切换 Worker CORS 的步骤。本轮未新增 CNAME、未启用真实统计、未提交或部署。
+- 验证：所有 `check-*` 已运行，7 个 JS 检查及 P0、二维码、新增 P2 检查通过；紫微使用只读 main 快照保留全部 3714 项断言。3 个 Playwright 页面检查及环境辅助脚本因未安装 Playwright 自动 SKIP。`cd worker && node --test test/*.test.js` 通过，展开为 27 项；另验证统计空配置、未加载/失败时静默、事件白名单和无敏感载荷、五页 canonical/description、sitemap/robots。语法与 diff 检查通过。
+- 下一步：站长完成实际域名绑定和 Umami 建站后填入 Website ID，再验证线上固定事件；当前配置不发送统计，真实浏览器与线上统计尚未验收，P1-0 打赏实测仍待完成。
+
 ### P1 Desktop Payment QR — 2026-11-05
 
 - `p1-backend` 追加最小改动：五页在共享服务脚本前加载本地 MIT `vendor/qrcode-generator.js`；非移动 UA 且宽度至少 768px 时点击打赏解锁即创建订单并显示同链接二维码、扫码说明及新窗口后备链接。沿用原轮询，成功关闭弹窗并显示到期；重开沿用未完成订单，手机与窄屏流程保持原样。共享服务缓存版本 `.3`。

@@ -124,6 +124,8 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 }
 </style>
 <link rel="stylesheet" href="liuyao-premium.css?v=20261101.1">
+<link rel="canonical" href="https://qimenbazi.cn/liuyao.html">
+<script src="site-analytics.js?v=20261105.1"></script>
 </head>
 <body class="standard">
 <a class="skip" href="#main">跳到主要内容</a>
@@ -308,9 +310,9 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 <script src="liuyao-usegod.js?v=20261105.1"></script>
 <script src="liuyao-verdict.js?v=20261105.1"></script>
 <script src="site-notice.js?v=20261105.2"></script>
-<script src="deepseek-client.js?v=20261105.2"></script>
+<script src="deepseek-client.js?v=20261105.4"></script>
 <script src="vendor/qrcode-generator.js"></script>
-<script src="site-service.js?v=20261105.3"></script>
+<script src="site-service.js?v=20261105.4"></script>
 <script>
 var RECORDS_STORAGE='liuyao_records_v1';
 var DISPLAY_STORAGE='liuyao_display_mode';
@@ -558,6 +560,7 @@ function finishCast(source,lines,meta,extra){
   if(extra&&extra.tosses)currentRecord.tosses=extra.tosses;if(extra&&extra.meihua)currentRecord.meihua=extra.meihua;
   lockForm(false);document.getElementById('btnStep').textContent='逐爻摇卦';renderPlate();updateFlow();if(persistCurrent('questionSummaryStatus'))setStatus('questionSummaryStatus','已自动保存');
   document.getElementById('plateCard').scrollIntoView({behavior:'smooth',block:'start'});
+  if (typeof SiteAnalytics !== 'undefined') SiteAnalytics.track('排盘完成');
 }
 function readRecords(statusId){
   try{var value=JSON.parse(localStorage.getItem(RECORDS_STORAGE)||'[]');return Array.isArray(value)?value:[]}

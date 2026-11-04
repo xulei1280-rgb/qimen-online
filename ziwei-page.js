@@ -467,6 +467,7 @@
       elements.inputState.className = "input-state";
       setStatus(saved ? "命盘已保存到本地；修改会更新同一份记录，另起一份请点击“新建命盘”。" : "命盘仅供预览，尚未保存；可点击“保存命盘”，AI 解读前也会自动保存。", "success");
       elements.chartPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (window.SiteAnalytics) window.SiteAnalytics.track("排盘完成");
     } catch (error) {
       if (error.code === "TIME_BRANCH_CONFIRMATION_REQUIRED") {
         state.pendingBirthInput = input;

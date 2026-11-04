@@ -70,11 +70,13 @@
         await DeepSeekClient.request('/api/feedback', { method: 'POST', auth: false, body: {
           type: form.elements.type.value, content: content, contact: form.elements.contact.value.trim(), page: page
         } });
+        if (window.SiteAnalytics) window.SiteAnalytics.track('反馈提交');
         form.reset(); $('feedback-status').textContent = '反馈已提交。';
       } catch (error) { $('feedback-status').textContent = error.message; }
       finally { $('feedback-submit').disabled = false; }
     };
     $('support-open').onclick = function () {
+      if (window.SiteAnalytics) window.SiteAnalytics.track('点击打赏');
       $('support-dialog').showModal();
       $('support-pay').hidden = desktop();
       if (desktop()) {

@@ -885,6 +885,8 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 </style>
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
 <link rel="stylesheet" href="bazi-premium.css?v=20261101.2">
+<link rel="canonical" href="https://qimenbazi.cn/bazi.html">
+<script src="site-analytics.js?v=20261105.1"></script>
 </head>
 <body>
 <a class="skip-link" href="#homeTabs">跳到排盘与记录</a>
@@ -996,9 +998,9 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="qimen.js"></script>
 <script src="bazi-engine.js?v=20261014.1"></script>
 <script src="site-notice.js?v=20261105.2"></script>
-<script src="deepseek-client.js?v=20261105.2"></script>
+<script src="deepseek-client.js?v=20261105.4"></script>
 <script src="vendor/qrcode-generator.js"></script>
-<script src="site-service.js?v=20261105.3"></script>
+<script src="site-service.js?v=20261105.4"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261101.2" defer></script>
 <script>
@@ -1551,6 +1553,7 @@ function buildBazi(){
   showBaziResult();
   if(activeBaziRecordId||document.getElementById('autoSaveBuild').checked)saveBaziRecord();
   document.getElementById('entryPanel').open=false;
+  if (typeof SiteAnalytics !== 'undefined') SiteAnalytics.track('排盘完成');
 }
 function showBaziHome(name){
   document.querySelectorAll('[data-home-view]').forEach(function(btn){var selected=btn.getAttribute('data-home-view')===name;btn.classList.toggle('active',selected);btn.ariaPressed=String(selected)});

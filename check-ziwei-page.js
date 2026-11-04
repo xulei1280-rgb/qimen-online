@@ -283,14 +283,14 @@ function runPageContracts() {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const pageSource = fs.readFileSync(PAGE_PATH, "utf8");
   assert(html.includes('src="vendor/iztro/2.5.8/iztro.min.js"'), "页面未使用本地 iztro");
-  assert(html.includes('src="ziwei-engine.js?v=20261102.1"') && html.includes('src="ziwei-page.js?v=20261105.2"'), "紫微改动脚本缺少发布缓存版本");
+  assert(html.includes('src="ziwei-engine.js?v=20261102.1"') && html.includes('src="ziwei-page.js?v=20261105.4"'), "紫微改动脚本缺少发布缓存版本");
   assert(pageSource.includes("成立依据—制约条件—运限触发") && pageSource.includes("四化是星曜的属性"), "AI 缺少条件式结构解读约束");
   assert(html.includes("大限宫干沿用本命原宫干") && html.includes("01:00 起丑") && html.includes("03:00 起寅") && html.includes("23:00 起晚子"), "页面没有公开大限宫干与时辰整点规则");
   assert(!/https?:\/\/[^"']+\.(?:js|css)/i.test(html), "页面含远程脚本或样式");
   assert(html.includes("[hidden] { display: none !important; }"), "缺少 hidden 样式修复");
   assert(html.includes("@media (prefers-reduced-motion: reduce)"), "缺少减少动态效果支持");
   assert(/href="index\.html">奇门<\/a>[\s\S]*href="bazi\.html">八字<\/a>[\s\S]*href="liuyao\.html">六爻<\/a>[\s\S]*href="ziwei\.html" aria-current="page">紫微<\/a>[\s\S]*href="daily\.html">日运<\/a>/.test(html), "紫微页面缺少统一五模块导航");
-  assert(html.includes('src="deepseek-client.js?v=20261105.2"') && pageSource.includes("window.DeepSeekClient.requestFinal"), "紫微 AI 未使用共享最终回答兜底");
+  assert(html.includes('src="deepseek-client.js?v=20261105.4"') && pageSource.includes("window.DeepSeekClient.requestFinal"), "紫微 AI 未使用共享最终回答兜底");
   assert(pageSource.includes("const AI_MODEL = window.DeepSeekClient.MODEL"), "紫微 AI 模型未使用共享配置");
   assert(pageSource.includes('const STORAGE_KEY = "ziwei_records_v1"'), "记录存储键错误");
   assert(html.includes('id="autoSaveBuild"') && html.includes('id="newBirth"') && html.includes('id="entrySave"'), "缺少自动保存、新建或手动保存命盘入口");

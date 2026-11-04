@@ -1,4 +1,4 @@
-# P1 部署交接（本次没有部署、登录或使用真实凭证）
+# P1 / P2 部署交接（本次没有部署、登录或使用真实凭证）
 
 纯 Worker + 单个 D1，无框架和项目依赖。测试需 Node 24（内置 `node:sqlite`）：
 
@@ -36,6 +36,14 @@ node --test worker/test/*.test.js
 9. 爱发电开发者页填写 webhook URL：`https://api.qimenbazi.cn/webhook/<WEBHOOK_PATH_SECRET>`。secret 路径不能放在前端。正式验收前关闭该 webhook 的公开使用。
 10. 完成下述 **P1-0 小额真实打赏 + 退款实测**，才能启用权益。核实后填写 `AFDIAN_PAID_AT_FIELD`（查单中真实的**付款时间字段名，值为 Unix 秒**）、`AFDIAN_REFUND_STATUS`（查单中已核实的退款/撤销状态，不能是 `2`），最后设 `AFDIAN_VERIFIED="true"` 并再次 `wrangler deploy`。这些占位不应凭样例猜测填写。
 11. 大陆手机网络实测 GitHub Pages → API → 爱发电付款 → 返回页自动解锁；再退款，确认最迟下次 cron 撤回对应权益。确认 Worker 每日 cron `0 19 * * *`（北京时间次日 03:00）执行成功。反馈可选在 D1 控制台查询 `SELECT type,content,contact,page,created_at FROM feedback ORDER BY created_at DESC;`。
+
+## 前端域名与统计（P2）
+
+1. 前端保持 GitHub Pages 从 `main` 的仓库根目录发布。**绑定域名时在仓库根加 CNAME，内容为 `qimenbazi.cn`，并在 GitHub Pages 设置自定义域名**、按 Pages 提示配置 DNS 和 HTTPS。本轮不创建 CNAME、不绑定域名。根目录 `sitemap.xml`、`robots.txt` 及五页 canonical 已按 `https://qimenbazi.cn/` 准备；首页 canonical 为域名根，其余为对应 HTML 路径。
+2. 前端切换域名时，将 `worker/wrangler.toml` 的 `ALLOWED_ORIGIN` 改为 `https://qimenbazi.cn` 并重新部署 Worker，验证 AI、反馈和订单请求。API 仍使用 `https://api.qimenbazi.cn`。域名绑定及 DNS 变更由站长执行。
+3. 注册 **Umami Cloud**，新建网站，域名填写 `qimenbazi.cn`，取得 Website ID。只把 ID 填入仓库根 **`site-analytics.js` 的 `const UMAMI_WEBSITE_ID = '';`**，发布前更新五页该脚本的缓存版本。保持空字符串时完全不加载 Umami；无需在五页分别填写 ID。
+4. 发布后核对四类固定事件：`排盘完成`、`AI 解读调用`、`反馈提交`、`点击打赏`。日运在新建当天盘面快照后记录排盘事件；AI 事件在请求 Worker chat 前记录（包含被额度拒绝的调用），反馈仅在提交成功后记录，打赏在点击“打赏解锁”时记录。只附白名单页面标识，不发送问句、盘面、日记、联系方式或凭证；不识别用户、不排队补发未加载期间的事件。
+5. 统计使用[官方自定义载荷接口](https://docs.umami.is/docs/tracker-functions)，并设置 `data-auto-track="false"` 关闭[自动采集](https://docs.umami.is/docs/tracker-configuration)，仅主动发送上述事件；URL 只保留固定页面路径，不携带查询参数、hash、referrer 或页面标题。脚本被拦截或统计失败不影响功能。本次未注册真实统计站点、未发真实事件。
 
 ## P1-0 必须记录的结果
 

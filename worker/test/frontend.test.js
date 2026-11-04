@@ -26,7 +26,8 @@ function page({ mobile = false, width = 1440, stored, request } = {}) {
     createElement: node, createTextNode: text => ({ textContent: text }), getElementById: id => nodes.get(id),
     addEventListener(name, fn) { events.set(name, fn); }
   };
-  const context = { document, innerWidth: width, navigator: { userAgent: mobile ? 'iPhone' : 'Desktop' }, location: { pathname: '/qimen-online/bazi.html', assign(url) { this.assigned = url; } },
+  const analytics = [];
+  const context = { SiteAnalytics: { track(event) { analytics.push(event); } }, document, innerWidth: width, navigator: { userAgent: mobile ? 'iPhone' : 'Desktop' }, location: { pathname: '/qimen-online/bazi.html', assign(url) { this.assigned = url; } },
     localStorage: { getItem: k => storage.get(k) || null, setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
     Date: class extends Date { static now() { return time; } },
     DeepSeekClient: { request }, setTimeout(fn, ms) { const id = ++timerId; timers.set(id, { fn, ms }); return id; }, clearTimeout(id) { timers.delete(id); },
@@ -42,7 +43,7 @@ function page({ mobile = false, width = 1440, stored, request } = {}) {
     return code;
   };
   vm.runInNewContext(readFileSync(new URL('../../site-service.js', import.meta.url), 'utf8'), context);
-  return { nodes, timers, events, storage, popup, document, qrUrls, opens: () => opens, advance: ms => time += ms };
+  return { nodes, timers, events, storage, popup, document, qrUrls, analytics, opens: () => opens, advance: ms => time += ms };
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
@@ -56,6 +57,7 @@ test('共享反馈表单：空内容不发送；只传类型、内容、选填�
   assert.equal(calls[0][1].auth, false);
   assert.deepEqual(JSON.parse(JSON.stringify(calls[0][1].body)), { type: '功能建议', content: '测试建议', contact: '', page: 'bazi.html' });
   assert.equal(p.nodes.get('feedback-status').textContent, '反馈已提交。'); assert.equal(p.nodes.get('feedback-submit').disabled, false);
+  assert.deepEqual(p.analytics, ['反馈提交']);
 });
 test('桌面点击解锁生成同订单二维码和后备链接，5秒轮询成功关闭弹窗', async () => {
   let polls = 0; const calls = [];
@@ -75,6 +77,7 @@ test('桌面点击解锁生成同订单二维码和后备链接，5秒轮询成�
   assert.equal(p.nodes.get('service-status').textContent, '已解锁至 2026-12-05'); assert.equal(p.timers.size, 0);
   assert.equal(p.storage.has('qimen_pending_order'), false); assert.equal(calls.length, 4);
   assert.equal(p.nodes.get('support-dialog').open, false);
+  assert.deepEqual(p.analytics, ['点击打赏', '点击打赏']);
 });
 test('手机付款窗口/返回焦点触发；保存的关联号可在重载后继续查询', async () => {
   const stored = new Map();
@@ -96,6 +99,7 @@ test('反馈失败可再提交；支付创建失败关闭预开的手机窗口�
   assert.equal(p.nodes.get('feedback-submit').disabled, false); assert.equal(form.elements.content.value, '建议');
   await p.nodes.get('support-pay').onclick(); assert.equal(p.popup.closed, true); assert.equal(p.nodes.get('support-pay').disabled, false);
   assert.equal(p.nodes.get('service-status').textContent, '服务暂时不可用');
+  assert.deepEqual(p.analytics, [], '提交失败不记录反馈成功事件');
 });
 
 test('非移动UA窄屏保持原链接流程，不自动创建订单或显示二维码', async () => {

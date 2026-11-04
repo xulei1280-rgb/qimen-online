@@ -7,6 +7,8 @@
 <meta name="description" content="演示传统奇门遁甲排盘与盘面解读，供传统文化学习参考。">
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
 <link rel="stylesheet" href="qimen-premium.css?v=20261102.3">
+<link rel="canonical" href="https://qimenbazi.cn/">
+<script src="site-analytics.js?v=20261105.1"></script>
 </head>
 <body>
 <main class="page qm-page">
@@ -211,9 +213,9 @@
 <script src="qimen.js?v=20260703-jieqi1"></script>
 <script src="bazi-engine.js?v=20261105.1"></script>
 <script src="site-notice.js?v=20261105.2"></script>
-<script src="deepseek-client.js?v=20261105.2"></script>
+<script src="deepseek-client.js?v=20261105.4"></script>
 <script src="vendor/qrcode-generator.js"></script>
-<script src="site-service.js?v=20261105.3"></script>
+<script src="site-service.js?v=20261105.4"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="qimen-premium.js?v=20261101.2" defer></script>
 <script>
@@ -763,6 +765,7 @@ function doPaiPan(opts){
   renderStatus(plateData,note);
   document.getElementById('infoPanel').innerHTML='<div class="title">排盘完成 · 点击宫位查看详情</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+renderAssistInfo(plateData,note)+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
   if(!opts.skipRecord)addAutoHistory();
+  if (typeof SiteAnalytics !== 'undefined') SiteAnalytics.track('排盘完成');
 }
 
 function renderPlate(data){

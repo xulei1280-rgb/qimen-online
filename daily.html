@@ -219,6 +219,8 @@
     }
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
   </style>
+<link rel="canonical" href="https://qimenbazi.cn/daily.html">
+<script src="site-analytics.js?v=20261105.1"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -364,9 +366,9 @@
   <script src="bazi-engine.js?v=20261105.1"></script>
   <script src="daily-engine.js?v=20260817.4"></script>
   <script src="site-notice.js?v=20261105.2"></script>
-  <script src="deepseek-client.js?v=20261105.2"></script>
+  <script src="deepseek-client.js?v=20261105.4"></script>
   <script src="vendor/qrcode-generator.js"></script>
-  <script src="site-service.js?v=20261105.3"></script>
+  <script src="site-service.js?v=20261105.4"></script>
   <script>
     var DAILY_DB_NAME='daily_journal_v1';
     var DAILY_DB_VERSION=2;
@@ -516,6 +518,7 @@
         if(!day){
           day={key:key,profileId:activeProfile.id,date:date,snapshot:DailyFortuneEngine.buildSnapshot(activeProfile,date,isoNow()),entries:[],entryRevision:0,ai:[],createdAt:isoNow(),updatedAt:isoNow()};
           await storePut('days',day);
+          if (typeof SiteAnalytics !== 'undefined') SiteAnalytics.track('排盘完成');
         }else if(!day.snapshot||day.snapshot.version!==DailyFortuneEngine.version||day.snapshot.outlookRevision!==DailyFortuneEngine.outlookRevision){
           var upgraded=DailyFortuneEngine.upgradeDayRecord(day,activeProfile,isoNow());day=upgraded.record;if(upgraded.changed)await storePut('days',day);
         }

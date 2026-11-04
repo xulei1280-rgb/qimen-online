@@ -11,7 +11,8 @@ function load(storage = new Map()) {
 const response = (body, ok = true) => ({ ok, async json() { return body; } });
 async function run() {
   const storage = new Map([['qimen_deepseek_api_key', 'old-secret-never-send'], ['qimen_api_base', 'http://localhost:8787/']]);
-  const root = load(storage), client = root.DeepSeekClient, calls = [];
+  const root = load(storage), client = root.DeepSeekClient, calls = [], analytics = [];
+  root.SiteAnalytics = { track(event) { analytics.push(event); } };
   assert.equal(storage.has('qimen_deepseek_api_key'), false);
   assert.equal(root.QIMEN_API_BASE, 'http://localhost:8787');
   const fetchImpl = async (url, init) => {
@@ -26,6 +27,7 @@ async function run() {
   assert.deepEqual(JSON.parse(chats[0].init.body), { messages: [{ role: 'user', content: 'test' }], max_tokens: 4096 });
   assert.ok(!JSON.stringify(calls).includes('old-secret-never-send')); assert.ok(!JSON.stringify(calls).includes('model'));
   assert.equal(storage.get('qimen_credential'), token);
+  assert.deepEqual(analytics, ['AI 解读调用', 'AI 解读调用']);
   let attempts = 0;
   await assert.rejects(client.requestFinal({ fetchImpl: async () => { attempts++; return response({ choices: [{ finish_reason: 'length', message: { content: '' } }] }); } }), /重试会消耗额度/);
   assert.equal(attempts, 1, 'no automatic retry');
@@ -36,7 +38,7 @@ async function run() {
   assert.equal(load().QIMEN_API_BASE, 'https://api.qimenbazi.cn');
   for (const page of ['index.html', 'bazi.html', 'liuyao.html', 'ziwei.html', 'daily.html']) {
     const html = fs.readFileSync(page, 'utf8');
-    assert.ok(html.includes('site-service.js?v=20261105.3'), page + ' shared feedback/support');
+    assert.ok(html.includes('site-service.js?v=20261105.4'), page + ' shared feedback/support');
     assert.doesNotMatch(html, /API_KEY_STORAGE|apiKey|API Key|api\.deepseek\.com/);
   }
   for (const path of ['deepseek-client.js', 'site-service.js', 'ziwei-page.js', 'README.md']) assert.doesNotMatch(fs.readFileSync(path, 'utf8'), /API_KEY_STORAGE|apiKey|API Key|api\.deepseek\.com/);

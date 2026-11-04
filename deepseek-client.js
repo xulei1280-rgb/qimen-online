@@ -57,6 +57,7 @@
     if (!fetchImpl) throw new Error('当前浏览器不支持网络请求。');
     var headers = { 'Content-Type': 'application/json' };
     if (options.auth !== false) headers.Authorization = 'Bearer ' + await getCredential(fetchImpl);
+    if (path === '/api/chat' && root.SiteAnalytics) root.SiteAnalytics.track('AI 解读调用');
     return send(path, { method: options.method || 'GET', headers: headers,
       ...(options.body ? { body: JSON.stringify(options.body) } : {}) }, fetchImpl);
   }

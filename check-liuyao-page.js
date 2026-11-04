@@ -374,7 +374,7 @@ assert.match(html,/@media\(max-width:900px\) and \(orientation:landscape\)/);
 assert.doesNotMatch(html,/document\.body\.className=mode/);
 assert.match(html,/liuyao_records_v1/);
 assert.strictEqual(deepseekClient.MODEL,'deepseek-v4-flash');
-assert.match(html,/src="deepseek-client\.js\?v=20261105\.2"/);
+assert.match(html,/src="deepseek-client\.js\?v=20261105\.4"/);
 assert.match(html,/DeepSeekClient\.requestFinal\(\{messages:messages,maxTokens:4096/);
 assert.match(html,/requestId!==aiRequestSeq/);
 assert.match(html,/useGodKeyAtStart=useGodSnapshotKey\(kernel\.fixedUseGod\)/);
