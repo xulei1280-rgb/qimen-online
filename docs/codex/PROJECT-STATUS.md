@@ -25,6 +25,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P1 Desktop Payment QR — 2026-11-05
+
+- `p1-backend` 追加最小改动：五页在共享服务脚本前加载本地 MIT `vendor/qrcode-generator.js`；非移动 UA 且宽度至少 768px 时点击打赏解锁即创建订单并显示同链接二维码、扫码说明及新窗口后备链接。沿用原轮询，成功关闭弹窗并显示到期；重开沿用未完成订单，手机与窄屏流程保持原样。共享服务缓存版本 `.3`。
+- 验证：新增 `check-qrcode.cjs` 校验样例 URL、模块数、暗模块、SVG 与五页加载顺序；所有 `check-*` 已执行，8 个 JS/CJS 功能检查（7 个既有 JS + 二维码）及 P0 合规检查通过，紫微仍以只读 main 快照执行全部断言；3 个 Playwright 页面检查和环境辅助脚本因缺少 Playwright 自动 SKIP。`cd worker && node --test test/*.test.js` 通过，展开共 27 项测试。未提交、未部署；真实浏览器外观、手机扫码与真实支付仍待验收，P1-0 开关保持关闭。
+
 ### P1 Worker / D1 / Frontend — 2026-11-05
 
 - 当前独立分支 `p1-backend`，本地基线 `5892be8`；`.git` 只读导致 fetch 无法更新 main，本次依用户要求不提交、不推送、不部署、不登录。新增 `worker/`（入口、D1 schema、Wrangler 配置、部署说明、无依赖 Node 测试），完成匿名哈希凭证、原子额度、失败退款、反馈、签名查单、幂等权益与 cron 对账；五页移除自填密钥和自动 AI 重试，共享 API 配置及反馈/打赏轮询，保留 P0 合规。
