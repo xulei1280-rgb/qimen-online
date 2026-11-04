@@ -2764,10 +2764,10 @@
     return {direction:direction,tendency:tendency,evidence:evidence,reservations:reservations,uncertainty:unique(uncertainty),life:unique(evidence.map(function(x){return x.life}).filter(Boolean)),basis:'实际任用路径、反证与救应结算',review:{beforeRoute:left.route,afterRoute:right.route,beforeTasks:left.tasks,afterTasks:right.tasks}};
   }
   function labelOutlook(result,kind){
-    var labels={natal:{positive:'助益',neutral:'持平',negative:'受阻',mixed:'利弊并存',pending:'待判'},previous:{positive:'上升',neutral:'持平',negative:'下降',mixed:'利弊并存',pending:'待判'},annual:{positive:'偏吉',neutral:'平',negative:'偏凶',mixed:'吉凶并见',pending:'待判'},increment:{positive:'改善',neutral:'维持',negative:'拖累',mixed:'利弊并存',pending:'待判'}};
+    var labels={natal:{positive:'助益',neutral:'持平',negative:'受阻',mixed:'利弊并存',pending:'待判'},previous:{positive:'上升',neutral:'持平',negative:'下降',mixed:'利弊并存',pending:'待判'},annual:{positive:'助益较多',neutral:'持平',negative:'受阻较多',mixed:'利弊并见',pending:'待判'},increment:{positive:'改善',neutral:'维持',negative:'拖累',mixed:'利弊并存',pending:'待判'}};
     var label=labels[kind][result.direction];
     if(result.direction==='pending'&&result.tendency){
-      var tentative={natal:{positive:'倾向助益',negative:'倾向受阻',mixed:'已有利弊'},previous:{positive:'倾向上升',negative:'倾向下降',mixed:'已有利弊'},annual:{positive:'倾向偏吉',negative:'倾向偏凶',mixed:'已有吉凶并见'},increment:{positive:'倾向改善',negative:'倾向拖累',mixed:'已有利弊'}};
+      var tentative={natal:{positive:'倾向助益',negative:'倾向受阻',mixed:'已有利弊'},previous:{positive:'倾向上升',negative:'倾向下降',mixed:'已有利弊'},annual:{positive:'倾向助益较多',negative:'倾向受阻较多',mixed:'已有利弊并见'},increment:{positive:'倾向改善',negative:'倾向拖累',mixed:'已有利弊'}};
       label=tentative[kind][result.tendency]+'（需复核）';
     }
     return Object.assign({},result,{label:label});

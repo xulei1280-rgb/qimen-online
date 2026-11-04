@@ -25,6 +25,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P0 Compliance / Page Titles and Descriptions — 2026-11-05
+
+- 当前工作在本机 `main`，基线 `3ae7a8f`。实现 P0-1 至 P0-7 与 P2-2，包含日运旧版本断言修正、六爻高风险象意分支、五页声明与共享发送确认。数据说明按用户要求省去尚未实现的服务端功能。
+- 验证：全部七个 `check-*.js` 及 `check-p0-compliance.cjs` 通过，四个高风险问句与三个非高风险问句、旧记录、模拟 AI 返回和跨页确认已核对。生产页面与脚本的指定旧文案扫描无匹配。真实浏览器与手机外观尚未验证，浏览器连接不可用且 computer-use 未获 Edge 访问。
+- 提交：Codex 会话内 .git 只读未能提交，由奇门产品经理验收后在本机代为提交（未 push）；验收报告在 I:\codex-tasks\qimen-online-p0。
+
 ### Bazi Address Visibility / Qimen Time Inputs — 2026-11-02
 
 - 八字：出生地址行由真太阳时开关控制，取消勾选即隐藏并关闭地址编辑面板，重新勾选保留已选地点；关闭时预览不再展示地址经纬。自动保存默认勾选。依用户追加要求，真太阳时默认不勾选（含新建表单重置），选项前显示“时间校对：”；旧记录编辑仍恢复其原时间口径，不改计算引擎。

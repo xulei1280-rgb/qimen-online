@@ -1315,7 +1315,7 @@
     elements.conversation.innerHTML = history.map((turn, index) => `
       <details class="turn" data-turn-id="${escapeHtml(turn.id)}" ${state.collapsedTurns.has(`${record.id}:${turn.id}`) ? "" : "open"}>
         <summary class="turn-question"><span class="turn-heading"><b>第 ${index + 1} 问</b><span class="turn-toggle"></span><button class="text-button turn-delete" type="button" data-delete-turn="${escapeHtml(turn.id)}">删除</button></span><small>${escapeHtml(turn.mode ? `解读方向 · ${aiModeLabel(turn.mode)} · ` : "问题 · ")}${escapeHtml(turn.style ? `${aiStyleLabel(turn.style)} · ` : "")}${escapeHtml(turn.horoscopeSnapshot?.targetSolarDate || "未选运限")}</small><strong>${escapeHtml(turn.question)}</strong></summary>
-        <div class="turn-answer"><small>${escapeHtml(turn.model)} · ${escapeHtml(formatDateTime(turn.createdAt))}</small>${Array.isArray(turn.formatWarning) && turn.formatWarning.length ? `<p class="ai-format-note" title="${escapeHtml(turn.formatWarning.join("；"))}">未完全按格式/依据不全，仅供参考</p>` : ""}${renderAiAnswer(normalizeAiAnswer(turn.answer), turn.evidenceRefs)}</div>
+        <div class="turn-answer"><small>${escapeHtml(turn.model)} · ${escapeHtml(formatDateTime(turn.createdAt))}</small>${Array.isArray(turn.formatWarning) && turn.formatWarning.length ? `<p class="ai-format-note" title="${escapeHtml(turn.formatWarning.join("；"))}">未完全按格式/依据不全，仅供参考</p>` : ""}${renderAiAnswer(normalizeAiAnswer(turn.answer), turn.evidenceRefs)}</div><p class="site-ai-notice">AI 生成内容，可能有误，请勿据此作重要决定。</p>
       </details>`).join("");
     elements.conversation.querySelectorAll("details[data-turn-id]").forEach((details) => {
       details.addEventListener("toggle", () => {

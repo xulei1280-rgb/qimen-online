@@ -35,12 +35,12 @@
     {id:'house',label:'房屋 · 车辆 · 衣物',use:'父母',target:rel('父母'),plain:'房屋、车船、衣服是“庇护我身者”，取父母。',source:SRC.yong+'“宅舍、屋宇、舟车、衣服……一切庇护我身者”',examples:'买房、租房、搬家、买车、驾照'},
     {id:'document',label:'考试 · 文书 · 合同 · 消息',use:'父母',target:rel('父母'),plain:'考试文章、合同证件、票据和音信都取父母。',source:SRC.yong+'“章奏、文书、文章、文契”；《黄金策》“父动卦中，当有鱼书之寄”',examples:'考试、成绩、合同、签证、证书、车票、回消息',note:'问能否录取、上榜，另参官鬼（功名）。'},
     {id:'job',label:'工作 · 求职 · 官运',use:'官鬼',target:rel('官鬼'),plain:'功名、职位、官府都取官鬼；子孙克官，是忌神。',source:SRC.yong+'“占功名、官府……皆以官鬼爻为用神”',examples:'工作、offer、面试、升职、跳槽、转正、编制'},
-    {id:'lawsuit',label:'官司 · 纠纷',use:'世爻（对方看应爻）',target:role('shi',{counter:'ying'}),plain:'官司输赢看世应：世为自己，应为对头；官鬼为问官。',source:SRC.lawsuit,examples:'官司、起诉、仲裁、纠纷'},
+    {id:'lawsuit',label:'官司 · 纠纷',use:'世爻（对方看应爻）',target:role('shi',{counter:'ying'}),plain:'传统词讼取象看世应，世为自己，应为对方，官鬼为问官，仅作象意参考。',source:SRC.lawsuit,examples:'官司、起诉、仲裁、纠纷'},
     {id:'weatherRain',label:'天气 · 下雨',use:'父母',target:rel('父母'),plain:'占雨以父母为用神。',source:SRC.tianshi+'“父母为雨神”',examples:'下雨、下雪、会不会淋雨'},
     {id:'weatherSun',label:'天气 · 放晴',use:'妻财',target:rel('妻财'),plain:'占晴以妻财为用神，子孙为日月星斗。',source:SRC.tianshi+'“妻财为晴神”',examples:'天晴、放晴、出太阳、天气好'},
-    {id:'medicine',label:'医药 · 医生',use:'子孙',target:rel('子孙'),plain:'医药、医生取子孙，子孙又是解忧、制鬼之神。',source:SRC.yong+'“占医士、医药……皆以子孙爻为用神”',examples:'吃药、疗效、医生、治疗方案'},
-    {id:'illnessSelf',label:'自己的疾病',use:'世爻',target:role('shi'),plain:'本人问自己的病，以世爻代表自己；药物、医生另看子孙。',source:SRC.illness+'；'+SRC.shiying,examples:'我的病、身体、康复'},
-    {id:'pregnancy',label:'怀孕 · 生育',use:'子孙',target:rel('子孙'),plain:'子女胎孕取子孙。',source:SRC.yong+'“占子孙……凡在我子孙辈中”',examples:'怀孕、备孕、生孩子'},
+    {id:'medicine',label:'医药 · 医生',use:'子孙',target:rel('子孙'),plain:'传统医药取象用子孙，子孙有解忧、制鬼之象，病情与疗效请咨询医生。',source:SRC.yong+'“占医士、医药……皆以子孙爻为用神”',examples:'吃药、疗效、医生、治疗方案'},
+    {id:'illnessSelf',label:'自己的疾病',use:'世爻',target:role('shi'),plain:'传统疾病取象以世爻代表本人，药物、医生另看子孙，病情请咨询医生。',source:SRC.illness+'；'+SRC.shiying,examples:'我的病、身体、康复'},
+    {id:'pregnancy',label:'怀孕 · 生育',use:'子孙',target:rel('子孙'),plain:'传统子女胎孕取象用子孙，生育相关问题请咨询医生。',source:SRC.yong+'“占子孙……凡在我子孙辈中”',examples:'怀孕、备孕、生孩子'},
     {id:'parents',label:'父母 · 长辈 · 师长',use:'父母',target:rel('父母'),plain:'父母、长辈、老师都取父母爻。',source:SRC.yong+'“凡在我父母之上……及师长”',examples:'父亲、母亲、爷爷、老师、岳父'},
     {id:'children',label:'子女 · 晚辈 · 宠物',use:'子孙',target:rel('子孙'),plain:'子女、晚辈、学生、宠物都取子孙爻。',source:SRC.yong+'“子孙、女婿、侄、甥、门徒……六畜禽兽”',examples:'儿子、女儿、学生、猫、狗'},
     {id:'peers',label:'兄弟 · 朋友 · 同事',use:'兄弟',target:rel('兄弟'),plain:'兄弟姐妹、朋友同辈取兄弟爻。',source:SRC.yong+'“兄弟、姐妹……及结拜弟兄”',examples:'哥哥、姐姐、朋友、同事、同学',note:'表兄弟野鹤验以应爻，姐丈妹夫以世爻。'},
@@ -203,7 +203,7 @@
   function roleName(value){return value==='shi'?'世爻':(value==='ying'?'应爻':value)}
   // 问题文字里出现这些“想得到的东西/天时/官司”时，以问题内容为准，不被问事类型的默认用神覆盖。
   var TEXT_WINS={food:1,money:1,item:1,house:1,rain:1,sun:1,lawsuit:1,pregnancy:1};
-  var TYPE_LABELS={career:'事业工作',wealth:'财运交易',love:'感情关系',cooperation:'合作谈判',travel:'出行迁动',lost:'寻找失物',other:'其他具体事项'};
+  var TYPE_LABELS={career:'事业工作',wealth:'财务事务',love:'感情关系',cooperation:'合作谈判',travel:'出行迁动',lost:'寻找失物',other:'其他具体事项'};
   var TYPE_HINTS={career:/工作|offer|职位|岗位|升职|晋升|求职|入职|录用|跳槽|转正|面试|事业|上班|升迁|官运|考核|编制|裁员|辞职|领导|老板|公司|单位/i,wealth:null,love:/感情|对象|另一半|喜欢|暗恋|复合|桃花|姻缘|婚姻|结婚|脱单|男朋友|女朋友|男友|女友|老公|老婆|恋爱|表白/,cooperation:/合作|谈判|合伙|项目|签约|客户|甲方|乙方/,travel:/出行|出差|旅行|旅游|出门|行程|航班|飞机|高铁|火车|自驾|出国|回家|到家|回国/};
   // 选类型前的小提示：问题内容明显属于另一类时，建议改选的问事类型。
   var CATEGORY_TYPE={food:'other',money:'wealth',item:'other',house:'other',weatherRain:'other',weatherSun:'other',lawsuit:'other',pregnancy:'other'};
@@ -261,7 +261,7 @@
       {id:'trip',label:'出行，或等人回来',next:'trip'},
       {id:'lost',label:'找丢失的东西',next:'lostThing'},
       {id:'weather',label:'天气（下雨还是放晴）',next:'weather'},
-      {id:'lawsuit',label:'官司、纠纷、和人相争',done:g('官司',role('shi',{counter:'ying'}),'lawsuit','官司看世应：世为自己，应为对方。')}
+      {id:'lawsuit',label:'官司、纠纷、和人相争',done:g('官司',role('shi',{counter:'ying'}),'lawsuit','传统词讼取象看世应，世为自己，应为对方，仅作象意参考。')}
     ]},
     thing:{title:'想得到的是什么？',options:[
       {id:'money',label:'钱、收入、生意回报',done:g('钱财',rel('妻财'),'money','钱财取妻财。')},

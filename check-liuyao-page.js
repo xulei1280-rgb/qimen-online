@@ -267,12 +267,12 @@ const resolveForPlate=new Function('currentPlate','LiuyaoEngine',resolveSource+'
 const debtRecord={question:'朋友欠我的钱能要回来吗',questionType:'other',asker:{mode:'self',gender:'男'}};
 const debtChoice=suggestForRecord(debtRecord,validatorPlate,inferUseGodTarget,engine);
 assert.strictEqual(debtChoice.relative,'妻财');assert.strictEqual(debtChoice.position,2);
-const kernelSource=html.match(/function buildAiKernelContext\(selectedOverride\)\{[\s\S]*?\n\}(?=\nfunction aiPlateContext)/)[0];
-const buildPageKernel=new Function('currentRecord','currentPlate','activeUseGod','LiuyaoEngine',kernelSource+';return buildAiKernelContext()');
+const kernelSource=html.match(/function buildAiKernelContext\(selectedOverride,question\)\{[\s\S]*?\n\}(?=\nfunction aiPlateContext)/)[0];
+const buildPageKernel=new Function('LiuyaoVerdict','currentRecord','currentPlate','activeUseGod','LiuyaoEngine','function isHighRiskQuestion(question){return LiuyaoVerdict.isHighRisk(currentRecord.question)||LiuyaoVerdict.isHighRisk(question)};'+kernelSource+';return buildAiKernelContext()').bind(null,require('./liuyao-verdict.js'));
 assert.throws(()=>buildPageKernel(debtRecord,validatorPlate,()=>null,engine),/无法唯一定位用神/,'歧义候选必须阻止自动发起解读');
 assert.strictEqual(buildPageKernel(debtRecord,validatorPlate,()=>debtChoice,engine).fixedUseGod.position,2,'修正后的用神必须进入真实 AI 上下文');
 const historySource=html.match(/function renderAiHistory\(\)\{[\s\S]*?\n\}(?=\nfunction useGodSnapshotKey)/)[0];
-const renderOldHistory=new Function('currentRecord','activeUseGod','useGodSnapshotKey','LiuyaoEngine','esc','nl','buildAiKernelContext',historySource+';return renderAiHistory()');
+const renderOldHistory=new Function('LiuyaoVerdict','currentRecord','activeUseGod','useGodSnapshotKey','LiuyaoEngine','esc','nl','buildAiKernelContext','function isHighRiskQuestion(question){return LiuyaoVerdict.isHighRisk(currentRecord.question)||LiuyaoVerdict.isHighRisk(question)};'+historySource+';return renderAiHistory()').bind(null,require('./liuyao-verdict.js'));
 const oldHistoryHtml=renderOldHistory({aiHistory:[{question:'原问题',answer:'原始回答',kernelVersion:'LIUYAO-ASSESSMENT-2026.09.05-v3',useGodSnapshot:debtChoice}]},()=>debtChoice,()=> 'same-use-god',engine,String,String,()=>{throw new Error('旧版不应按新版重新背书')});
 assert.match(oldHistoryHtml,/旧版规则解读/);assert.match(oldHistoryHtml,/原始回答/);
 assert.match(html,/id="blankPlate"/);
@@ -309,7 +309,7 @@ assert.match(html,/明确写出固定用神的爻位、六亲和干支/);
 assert.match(html,/function renderUseGodRelations\(\)/);
 assert.match(html,/LiuyaoEngine\.buildUseGodRelations/);
 assert.match(html,/LiuyaoEngine\.buildUseGodAssessment/);
-assert.match(html,/function buildAiKernelContext\(selectedOverride\)/);
+assert.match(html,/function buildAiKernelContext\(selectedOverride,question\)/);
 assert.match(html,/function validateLiuyaoAiAnswer\(answer,kernel\)/);
 assert.match(html,/LiuyaoEngine\.validateAiInterpretation/);
 assert.match(html,/fixedUseGod/);
@@ -373,7 +373,7 @@ assert.match(html,/@media\(max-width:900px\) and \(orientation:landscape\)/);
 assert.doesNotMatch(html,/document\.body\.className=mode/);
 assert.match(html,/liuyao_records_v1/);
 assert.strictEqual(deepseekClient.MODEL,'deepseek-v4-flash');
-assert.match(html,/src="deepseek-client\.js\?v=20260817\.1"/);
+assert.match(html,/src="deepseek-client\.js\?v=20261105\.1"/);
 assert.match(html,/DeepSeekClient\.requestFinal\(\{apiKey:key,messages:messages,maxTokens:16384/);
 assert.match(html,/requestId!==aiRequestSeq/);
 assert.match(html,/useGodKeyAtStart=useGodSnapshotKey\(kernel\.fixedUseGod\)/);
@@ -722,7 +722,7 @@ assert.ok(/卦变反吟/.test(fs.readFileSync('./liuyao-engine.js','utf8')));
   // 1. 用户的啤酒盘：艮为山之山地剥，戊戌月庚辰日，五爻妻财丙子；月克日克入墓，三爻子孙申金动来生，四爻戌土暗动与原神同动
   const beer=verdictOf([8,8,9,8,8,7],'戊戌','庚辰',{position:5,hidden:false},'今晚我还会喝啤酒吗','food');
   assert.strictEqual(beer.plate.primary.fullName,'艮为山');assert.strictEqual(beer.plate.changed.fullName,'山地剥');
-  assert.strictEqual(beer.v.rule,'D4');assert.strictEqual(beer.v.tendency,'strained');assert.strictEqual(beer.v.label,'受制较重，有一线转机');
+  assert.strictEqual(beer.v.rule,'D4');assert.strictEqual(beer.v.tendency,'strained');assert.strictEqual(beer.v.label,'制约较重，存在生扶条件');
   assert.strictEqual(beer.v.answer,'今晚想喝上啤酒不太容易；除非有人张罗、朋友相邀或心情放松的场合（三爻子孙发动来生妻财）。');
   assert.deepStrictEqual([beer.v.scores.root,beer.v.scores.move,beer.v.scores.total],[-5,3,-2]);
   assert.ok(beer.v.reasons.length>=2&&beer.v.reasons.length<=3);assert.match(beer.v.reasons[0].text,/日月都不帮/);assert.ok(beer.v.reasons.some(r=>/子孙丙申金明动/.test(r.text)));
@@ -731,10 +731,10 @@ assert.ok(/卦变反吟/.test(fs.readFileSync('./liuyao-engine.js','utf8')));
   beer.v.items.forEach(i=>assert.match(i.source,/《增删卜易/,'每条依据都要有出处'));
   // 2. 明显有利：用神二爻寅木临寅月当令、子日生，静卦无伤 → 偏顺利
   const good=verdictOf([7,7,8,7,7,6],'甲寅','甲子',{position:2,hidden:false},'这笔钱能到吗','money');
-  assert.strictEqual(good.v.rule,'D6');assert.strictEqual(good.v.label,'偏顺利');assert.strictEqual(good.v.scores.root,4);assert.match(good.v.answer,/拿到这笔钱的可能较大/);
+  assert.strictEqual(good.v.rule,'D6');assert.strictEqual(good.v.label,'支持条件较多');assert.strictEqual(good.v.scores.root,4);assert.match(good.v.answer,/拿到这笔钱的可能较大/);
   // 3. 明显不利：休囚静而月破日克（D1，引擎“无根”优先规则）
   const bad=verdictOf([6,8,9,6,6,6],'丙子','甲子',{position:2,hidden:false},'这次升职能成吗','job');
-  assert.strictEqual(bad.v.rule,'D1');assert.strictEqual(bad.v.label,'偏不利');assert.ok(bad.v.items.some(i=>i.key==='monthBreak'));assert.ok(bad.v.timing.some(t=>/月破/.test(t)));
+  assert.strictEqual(bad.v.rule,'D1');assert.strictEqual(bad.v.label,'制约条件较多');assert.ok(bad.v.items.some(i=>i.key==='monthBreak'));assert.ok(bad.v.timing.some(t=>/月破/.test(t)));
   // 4. 旬空：真空 → 偏不利（D2）；旺而空为假空，不扣分，仍偏顺利
   const trueVoid=verdictOf([6,6,6,6,6,6],'丁卯','辛未',{position:5,hidden:false},'这笔钱能到吗','money');
   assert.strictEqual(trueVoid.v.rule,'D2');assert.ok(trueVoid.v.items.some(i=>i.key==='trueVoid'&&i.weight===-2));
@@ -747,7 +747,7 @@ assert.ok(/卦变反吟/.test(fs.readFileSync('./liuyao-engine.js','utf8')));
   assert.strictEqual(hiddenRescued.v.rule,'D4');
   // 6. 生扶与制约都重而相抵 → 吉凶参半（D3），不硬下结论
   const mixed=verdictOf([6,6,6,6,6,6],'丁卯','癸卯',{position:5,hidden:false},'这笔钱能到吗','money');
-  assert.strictEqual(mixed.v.rule,'D3');assert.strictEqual(mixed.v.label,'吉凶参半');assert.match(mixed.v.answer,/规则难下定论/);
+  assert.strictEqual(mixed.v.rule,'D3');assert.strictEqual(mixed.v.label,'条件交错');assert.match(mixed.v.answer,/规则难下定论/);
   assert.ok(mixed.v.scores.positive>=3&&mixed.v.scores.negative<=-3&&Math.abs(mixed.v.scores.total)<=1);
   // 7. 同一变爻的回头生与化长生只计一次
   assert.strictEqual(mixed.v.items.filter(i=>i.key==='changeUp').length,1);

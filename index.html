@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=3.0">
-<title>奇门遁甲 - 时家转盘排盘</title>
+<title>奇门遁甲排盘 · 传统文化学习工具</title>
+<meta name="description" content="演示传统奇门遁甲排盘与盘面解读，供传统文化学习参考。">
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
 <link rel="stylesheet" href="qimen-premium.css?v=20261102.3">
 </head>
@@ -143,10 +144,9 @@
             <option value="general">综合</option>
             <option value="career">事业工作</option>
             <option value="love">感情关系</option>
-            <option value="wealth">财运投资</option>
+            <option value="wealth">财务事务</option>
             <option value="cooperation">合作谈判</option>
             <option value="travel">出行迁动</option>
-            <option value="health">健康疾病</option>
             <option value="lost">找失物</option>
             <option value="exam">考试竞聘</option>
             <option value="choice">选择决策</option>
@@ -167,10 +167,9 @@
       <div class="quick-questions" aria-label="常用问事">
         <button type="button" onclick="useQuestionTemplate('career')">事业</button>
         <button type="button" onclick="useQuestionTemplate('love')">感情复合</button>
-        <button type="button" onclick="useQuestionTemplate('wealth')">财运投资</button>
+        <button type="button" onclick="useQuestionTemplate('wealth')">财务事务</button>
         <button type="button" onclick="useQuestionTemplate('cooperation')">合作谈判</button>
         <button type="button" onclick="useQuestionTemplate('travel')">出行</button>
-        <button type="button" onclick="useQuestionTemplate('health')">健康</button>
         <button type="button" onclick="useQuestionTemplate('lost')">找失物</button>
         <button type="button" onclick="useQuestionTemplate('exam')">考试竞聘</button>
         <button type="button" onclick="useQuestionTemplate('choice')">选择</button>
@@ -211,8 +210,9 @@
 </main>
 
 <script src="qimen.js?v=20260703-jieqi1"></script>
-<script src="bazi-engine.js?v=20260820.2"></script>
-<script src="deepseek-client.js?v=20260817.1"></script>
+<script src="bazi-engine.js?v=20261105.1"></script>
+<script src="site-notice.js?v=20261105.1"></script>
+<script src="deepseek-client.js?v=20261105.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="qimen-premium.js?v=20261101.2" defer></script>
 <script>
@@ -615,7 +615,7 @@ function getQuestionType(){
   return (document.getElementById('questionType')&&document.getElementById('questionType').value)||'general';
 }
 function getQuestionTypeLabel(type){
-  var labels={general:'综合',career:'事业工作',love:'感情关系',wealth:'财运投资',cooperation:'合作谈判',travel:'出行迁动',health:'健康疾病',lost:'找失物',exam:'考试竞聘',choice:'选择决策',birth:'命盘分析'};
+  var labels={general:'综合',career:'事业工作',love:'感情关系',wealth:'财务事务',cooperation:'合作谈判',travel:'出行迁动',lost:'找失物',exam:'考试竞聘',choice:'选择决策',birth:'命盘分析'};
   return labels[type]||'综合';
 }
 function getPersonName(){
@@ -657,7 +657,6 @@ function getUseGodHints(type){
     wealth:['生门','日主落宫','值符','门迫/入墓'],
     cooperation:['日主与对方时干','六合','开门','值使门'],
     travel:['马星','开门','景门','空亡'],
-    health:['天芮/病符','死门','日主状态','入墓击刑'],
     lost:['时干','值使门','空亡','马星动象'],
     exam:['景门','值符','日主旺衰','开门'],
     choice:['日主','值使门','两方案落宫','空亡冲克'],
@@ -702,10 +701,9 @@ function useQuestionTemplate(type){
   var map={
     career:['career','事业/工作：我想看这件工作/事业的发展和建议。'],
     love:['love','感情关系：我想看对方状态、关系走向和是否适合推进。'],
-    wealth:['wealth','财运投资：我想看这笔钱/项目的得失风险和建议。'],
+    wealth:['wealth','财务事务：这件事我需要注意什么、可以怎样理清思路？'],
     cooperation:['cooperation','合作谈判：我想看对方诚意、合作风险和结果。'],
     travel:['travel','出行安排：我想看此行是否顺利、注意什么。'],
-    health:['health','健康疾病：我想看恢复趋势和需要注意的地方。'],
     lost:['lost','找失物：我想看东西大概在哪里、还能不能找到。'],
     exam:['exam','考试竞聘：我想看结果趋势、发挥和准备重点。'],
     choice:['choice','选择决策：A 和 B 怎么选，哪个更稳？'],
@@ -1034,6 +1032,8 @@ async function analyzeWithAI(){
   };
   var prompt='你是奇门遁甲专家，请结合全盘信息综合分析用户的问题。\n重要规则：日主/用神落宫=天盘干为日主的宫位（不是地盘干）。\n本盘原始问事：'+originalQuestion+'\n本次问题：'+question+'\n问事类型：'+getQuestionTypeLabel(qType)+'；重点用神提示：'+getUseGodHints(qType).join('、')+'；分析模式：'+getAiModeLabel(aiMode)+'。\n求测人性别：'+gender+'\n局式：'+plateData.juInfo.juShi+'，'+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+'，旬首'+plateData.juInfo.xunShou+plateData.juInfo.xunShouYi+'，值符'+plateData.juInfo.zhiFu+'，值使'+plateData.juInfo.zhiShi+'门\n八字：'+plateData.ganzhi.year+'年 '+plateData.ganzhi.month+'月 '+plateData.ganzhi.day+'日 '+plateData.ganzhi.hour+'时，日主'+plateData.riZhu+'\n旬空：'+plateData.kongWang.join(' ')+' 马星：'+plateData.maXing+'\n风险提醒：'+getRiskWarnings(plateData,getJieQiNote(plateData.solarTime)).join('；')+'\n\n'+buildQimenBaziContext(plateData.linkedBazi)+'\n全盘信息：\n'+plateInfo+'\n'+(modeGuide[aiMode]||modeGuide.brief);
   var systemPrompt='你是专业的奇门遁甲分析师。一个奇门盘只回答同一件事的连续追问。若“本次问题”不是围绕“本盘原始问事”的同一人、同一事、同一决策、同一关系或同一问题延伸，只回复：一个盘只能问同一件事。请重新起盘或回到原问题继续问。\n奇门是当前问题、决策与短期应期的主依据；如有提供问事人八字，八字只能补充长期趋势、所处阶段与个人倾向，不能替代奇门或混成确定结论。\n若属于同一件事，请根据问事类型、用户问题和所选分析模式自然组织回答，不要套用固定四段模板，也不要强制使用“用神落宫、全盘格局、关键宫位、综合建议”这些标题。需要详断时可以分段，需要简断或只看结论时直接给结论和关键依据。每段之间空一行，不用markdown符号。完成内部思考后，必须输出面向用户的最终解读正文。';
+  prompt+='\n不提供投资、收益或买卖建议。';
+  systemPrompt+='\n不提供投资、收益或买卖建议。不判断病情、疗效，涉及健康建议就医。';
   var messages=[{role:'system',content:systemPrompt}];
   for(var i=0;i<aiHistory.length;i++){
     messages.push({role:'user',content:'追问：'+aiHistory[i].q});
@@ -1071,7 +1071,7 @@ function renderAIHistory(){
   for(var i=0;i<aiHistory.length;i++){
     h+='<details class="ai-turn" '+(aiCollapsed[i]?'':'open')+' ontoggle="rememberAiFold(this,'+i+')">'+
       '<summary class="ai-turn-question"><b>第'+(i+1)+'问</b><span class="ai-turn-time">'+esc(aiHistory[i].t)+'</span><button type="button" class="ai-turn-delete" title="删除这一问" aria-label="删除第'+(i+1)+'问" onclick="event.preventDefault();event.stopPropagation();deleteAiTurn('+i+')">删除</button><span class="ai-turn-toggle"></span><strong>'+esc(aiHistory[i].q)+'</strong></summary>'+
-      '<div class="ai-turn-answer">'+br(aiHistory[i].a)+'</div></details>';
+      '<div class="ai-turn-answer">'+br(aiHistory[i].a)+'</div><p class="site-ai-notice">AI 生成内容，可能有误，请勿据此作重要决定。</p></details>';
   }
   var pending=qimenAiPendingRequest>0?' disabled':'';
   return h+'<div class="followups">'+
@@ -1259,7 +1259,7 @@ function loadHistory(id,kind){
   aiTopic=item.aiTopic?JSON.parse(JSON.stringify(item.aiTopic)):(aiHistory[0]?{question:aiHistory[0].q,type:item.questionType||'general',person:item.person||'',createdAt:item.createdAt||''}:null);
   currentAutoHistoryId=kind==='auto'?item.id:null;
   currentSavedHistoryId=kind==='saved'?item.id:null;
-  if(item.questionType&&document.getElementById('questionType'))document.getElementById('questionType').value=item.questionType;
+  if(item.questionType&&document.getElementById('questionType'))document.getElementById('questionType').value=item.questionType==='health'?'general':item.questionType;
   if(document.getElementById('question'))document.getElementById('question').value=item.question||'';
   if(document.getElementById('personName'))document.getElementById('personName').value=item.person||plateData.personName||'';
   plateData.gender=item.gender||plateData.gender||'男';
@@ -1324,10 +1324,11 @@ function renderRecordList(kind){
   for(var i=hist.length-1;i>=0;i--){
     var h=hist[i];
     var hid=Number(h.id)||0;
+    var tag=h.questionType?getQuestionTypeLabel(h.questionType):(h.tag||'');
     var text=(h.name+' '+(h.tag||'')+' '+(h.person||'')+' '+(h.question||'')+' '+h.solarTime.year+'-'+pad(h.solarTime.month)+'-'+pad(h.solarTime.day)).toLowerCase();
     if(kw&&text.indexOf(kw)<0)continue;
     html+='<div class="hist-item">'+
-      '<span class="hi-date">'+(h.tag?'['+esc(h.tag)+'] ':'')+h.solarTime.year+'-'+pad(h.solarTime.month)+'-'+pad(h.solarTime.day)+'</span>'+
+      '<span class="hi-date">'+(tag?'['+esc(tag)+'] ':'')+h.solarTime.year+'-'+pad(h.solarTime.month)+'-'+pad(h.solarTime.day)+'</span>'+
       '<span class="hi-name" title="'+esc(h.name)+'" onclick="loadHistory('+hid+',\''+kind+'\')">'+esc(h.name)+'</span>'+
       '<span class="hi-btns">'+
         '<button onclick="event.stopPropagation();renameHistory('+hid+',\''+kind+'\')">改名</button>'+

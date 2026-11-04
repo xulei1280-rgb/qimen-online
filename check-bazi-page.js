@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const vm = require('vm');
 
 const html = fs.readFileSync('bazi.html', 'utf8');
-assert(html.includes('src="deepseek-client.js?v=20260817.1"') && html.includes('DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384'), 'Bazi AI should use the shared DeepSeek final-answer fallback');
+assert(html.includes('src="deepseek-client.js?v=20261105.1"') && html.includes('DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384'), 'Bazi AI should use the shared DeepSeek final-answer fallback');
 assert(!html.includes("model:'deepseek-chat'"), 'Bazi AI should not use the retired non-thinking model alias');
 assert(/href="index\.html">奇门<\/a>[\s\S]*href="bazi\.html" aria-current="page">八字<\/a>[\s\S]*href="liuyao\.html">六爻<\/a>[\s\S]*href="ziwei\.html">紫微<\/a>[\s\S]*href="daily\.html">日运<\/a>/.test(html), 'Bazi should expose the unified five-module navigation');
 
@@ -1698,7 +1698,7 @@ assert(findTask(footLimited,'carry-wealth').state===null && findTask(footLimited
 const footBridged=coreFixture('财',{'比肩':{position:2,stem:'甲'},'偏财':{position:4,stem:'戊',hiddenIndex:2},'食神':{position:0,stem:'丙',hiddenIndex:1}},'中和');
 footBridged.pillars.luck='戊寅';footBridged.profiles['偏财'].branchEntries[0].branch='寅';footBridged.profiles['食神'].branchEntries[0].branch='寅';
 assert(findTask(footBridged,'carry-wealth').state===1 && findTask(footBridged,'carry-wealth').conditions.some(x=>x.includes('透清通根之火承接')), 'rooted clear fire can bridge wood restraining temporal earth; the pillar name alone is not bad');
-assert(rules.label({direction:'mixed'},'annual').label==='吉凶并见' && rules.label({direction:'mixed'},'increment').label==='利弊并存', 'annual overall and annual increment must use their respective mixed labels');
+assert(rules.label({direction:'mixed'},'annual').label==='利弊并见' && rules.label({direction:'mixed'},'increment').label==='利弊并存', 'annual overall and annual increment must use their respective mixed labels');
 assert(!engine.includes('function outlookElements(') && !engine.includes('var ranks={已破:0'), 'the old generic element and rank direction shortcuts must be removed');
 const missingOutlook = outlookEngine.evaluateLuckOutlook({ pillars: { day: '甲子' }, dayStem: '甲' }, '壬寅', null, outlookYearRows);
 assert(missingOutlook.natal.label === '待判' && missingOutlook.years.every((year) => year.annual.label === '待判'), 'missing natal inputs must not become neutral');
@@ -1712,7 +1712,7 @@ const realChartOutlook = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, '�
 assert(realChartOutlook.years.length === 10 && JSON.stringify(outlookEngine.analyzePattern(wenZhenLuckChart)) === natalBeforeOutlook, 'a real calendar reference should expose ten annual results without changing its natal analysis');
 vm.runInContext('GZ60', scriptContext).forEach((gz) => {
   const reviewed = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, gz, '癸亥', [{ year: 2026, gz: '丙午' }]);
-  assert(!/undefined|NaN/.test(JSON.stringify(reviewed)) && (['偏吉','平','偏凶','吉凶并见','待判'].includes(reviewed.years[0].annual.label)||/^(倾向偏吉|倾向偏凶|已有吉凶并见)（需复核）$/.test(reviewed.years[0].annual.label)), `complete calendar chart should produce finite, explicit evidence or a stated uncertainty for ${gz}`);
+  assert(!/undefined|NaN/.test(JSON.stringify(reviewed)) && (['助益较多','持平','受阻较多','利弊并见','待判'].includes(reviewed.years[0].annual.label)||/^(倾向助益较多|倾向受阻较多|已有利弊并见)（需复核）$/.test(reviewed.years[0].annual.label)), `complete calendar chart should produce finite, explicit evidence or a stated uncertainty for ${gz}`);
   if(reviewed.years[0].annual.direction==='pending')assert(reviewed.years[0].annual.uncertainty.length>0, 'pending needs the actual missing condition');
   const reversed = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, '癸亥', gz, []);
   const opposite = { positive:'negative', negative:'positive', neutral:'neutral', mixed:'mixed', pending:'pending' };

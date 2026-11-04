@@ -2,7 +2,7 @@
  * 判断顺序（与 DECISION_TABLE 一致，逐条可在页面「为什么这么断」里看到）：
  *   1. 用神根基（日月为主）：月建、日辰对用神的生扶拱合或刑冲克害 → 根基分 R。
  *   2. 动变作用：有力的原神、忌神、同类，用神自身动变，伏藏，空亡 → 动变分 M。
- *   3. 按决策表从上到下取第一条命中的结论；生扶与制约都重而相抵时，只说“吉凶参半”。
+ *   3. 按决策表从上到下取第一条命中的结论；生扶与制约都重而相抵时，只说“条件交错”。
  * 权重只是把古书“先后轻重”写成可检验的顺序，不是吉凶概率。
  */
 (function(root,factory){
@@ -31,7 +31,12 @@
     grave:'《增删卜易·墓库章》：用神休囚入墓，主困滞',
     timing:'《增删卜易·应期章》：用神休囚，应在生旺之日；空待出空冲空，破待填实出月'
   };
-  var LABELS={favorable:'偏顺利',obstructed:'有阻但能成',strained:'受制较重，有一线转机',unfavorable:'偏不利',mixed:'吉凶参半',timing:'吉凶参半，看应期'};
+  var LABELS={favorable:'支持条件较多',obstructed:'支持与制约并存',strained:'制约较重，存在生扶条件',unfavorable:'制约条件较多',mixed:'条件交错',timing:'条件交错，待核对时序'};
+  var HIGH_RISK_NOTICE='此类问题只作传统象意参考，请咨询医生/律师/专业人士';
+  function isHighRisk(question,category){
+    if(/^(lawsuit|medicine|illnessSelf|pregnancy)$/.test(category||''))return true;
+    return /病情|病会好|能治好|治得好|疗效|药效|治疗|生病|疾病|症状|康复|痊愈|手术|住院|我的病|身体健康|怀孕|怀上|备孕|生育|生孩子|胎儿|官司|诉讼|胜诉|败诉|仲裁|起诉|投资|交易|股票|炒股|基金|期货|证券|能不能赚钱|收益如何|会不会亏/.test(String(question||''));
+  }
   // 决策表：从上到下，取第一条命中的。R＝根基分，M＝动变分，T＝R+M，P＝生扶权重和，N＝制约权重和（负数）。
   var DECISION_TABLE=[
     {id:'D1',tendency:'unfavorable',when:'用神休囚安静，同时月破、日克（引擎判“无根”）',why:'《月破章》：休囚静而逢破又受日克，外来生扶难落实'},
@@ -68,6 +73,12 @@
     input=input||{};
     var plate=input.plate,a=input.assessment,useGod=input.useGod;
     if(!plate||!a||!useGod)return null;
+    if(isHighRisk(input.question,input.category)){
+      var symbolFocus=a.focus;
+      return {version:VERSION,highRisk:true,label:'传统象意参考',answer:HIGH_RISK_NOTICE,
+        reasons:[{tone:'neutral',text:'用神为'+symbolFocus.lineLabel+(symbolFocus.hidden?'伏神':'')+symbolFocus.relative+symbolFocus.stem+symbolFocus.branch+symbolFocus.element+'，仅作传统取象。'},
+          {tone:'neutral',text:'月建'+plate.calendar.monthGZ+'，日辰'+plate.calendar.dayGZ+'，仅列历法背景。'}],timing:[]};
+    }
     var focus=a.focus,line=plate.lines.find(function(l){return l.position===focus.position});
     var monthBranch=plate.calendar.monthBuild||(plate.calendar.monthGZ||'')[1],dayBranch=plate.calendar.dayBranch||(plate.calendar.dayGZ||'')[1];
     var mEl=ELEMENTS[monthBranch],dEl=ELEMENTS[dayBranch],el=focus.element,br=focus.branch,season=seasonalState(mEl,el);
@@ -197,5 +208,5 @@
     if(focus.hidden)timing.push('伏神待提拔：飞神被冲（逢'+CLASH[line.original.branch]+'日）或伏神值日（逢'+br+'日）');
     return {version:VERSION,tendency:tendency,label:label,rule:rule.id,ruleWhen:rule.when,ruleWhy:rule.why,answer:answer,reasons:reasons.slice(0,3),timing:timing.slice(0,3),items:items,scores:{root:R,move:M,total:T,positive:P,negative:N,rescue:rescue},focusName:name,disclaimer:'规则初断：只按传统纳甲规则把日月、动变、空破的先后轻重排出倾向，不是确定结果；可展开“为什么这么断”核对每一条。'};
   }
-  return {version:VERSION,build:build,decisionTable:DECISION_TABLE,labels:LABELS,sources:SRC};
+  return {version:VERSION,build:build,decisionTable:DECISION_TABLE,labels:LABELS,sources:SRC,isHighRisk:isHighRisk,highRiskNotice:HIGH_RISK_NOTICE};
 });

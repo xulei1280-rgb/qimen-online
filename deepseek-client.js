@@ -48,6 +48,10 @@
     var fetchImpl = options.fetchImpl || (typeof fetch === "function" && fetch);
     if (!fetchImpl) throw new Error("当前浏览器不支持网络请求。");
     if (!String(options.apiKey || "").trim()) throw new Error("请先填写 DeepSeek API Key。");
+    if (typeof window !== "undefined") {
+      if (!window.SiteNotice) throw new Error("使用与数据说明未加载，请刷新后重试。");
+      if (!window.SiteNotice.confirmAI(options)) throw new Error("已取消发送至 DeepSeek。");
+    }
     var maxTokens = Number(options.maxTokens) || 16384;
     var first = await post(fetchImpl, String(options.apiKey).trim(), options.messages || [], maxTokens, true);
     try {

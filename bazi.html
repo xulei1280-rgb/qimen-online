@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=3.0">
-<title>八字分析 - 四柱排盘</title>
+<title>八字四柱排盘 · 传统文化学习工具</title>
+<meta name="description" content="演示传统八字四柱排盘，查看格局与岁运条件，供传统文化学习参考。">
 <style>
 :root{
   --bg:#f4f3ee;
@@ -994,7 +995,8 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 
 <script src="qimen.js"></script>
 <script src="bazi-engine.js?v=20261014.1"></script>
-<script src="deepseek-client.js?v=20260817.1"></script>
+<script src="site-notice.js?v=20261105.1"></script>
+<script src="deepseek-client.js?v=20261105.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261101.2" defer></script>
 <script>
@@ -2471,7 +2473,7 @@ function renderFactCheck(answer){
 function renderAiHistoryHtml(){
   if(!aiHistory.length)return '<div class="empty">可以围绕同一八字连续追问不同主题。</div>';
   return aiHistory.map(function(x,i){
-    return '<details class="ai-turn" '+(aiCollapsed[i]?'':'open')+' ontoggle="rememberBaziAiFold(this,'+i+')"><summary class="ai-turn-question"><b>第'+(i+1)+'问</b><span>'+esc(x.t)+'</span><span class="turn-toggle"></span><button type="button" class="turn-delete" onclick="event.preventDefault();event.stopPropagation();deleteBaziAiTurn('+i+')">删除</button><strong>'+esc(x.q)+'</strong></summary>'+renderFactCheck(x.a)+'<div class="ai-turn-answer">'+esc(x.a)+'</div></details>';
+    return '<details class="ai-turn" '+(aiCollapsed[i]?'':'open')+' ontoggle="rememberBaziAiFold(this,'+i+')"><summary class="ai-turn-question"><b>第'+(i+1)+'问</b><span>'+esc(x.t)+'</span><span class="turn-toggle"></span><button type="button" class="turn-delete" onclick="event.preventDefault();event.stopPropagation();deleteBaziAiTurn('+i+')">删除</button><strong>'+esc(x.q)+'</strong></summary>'+renderFactCheck(x.a)+'<div class="ai-turn-answer">'+esc(x.a)+'</div><p class="site-ai-notice">AI 生成内容，可能有误，请勿据此作重要决定。</p></details>';
   }).join('');
 }
 function rememberBaziAiFold(node,index){
