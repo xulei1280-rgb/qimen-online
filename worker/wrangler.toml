@@ -1,0 +1,22 @@
+name = "qimen-api"
+main = "src/index.js"
+compatibility_date = "2026-11-05"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "qimen"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[vars]
+AFDIAN_USER_ID = "ce5512ded87411f1a31d52540025c377"
+AFDIAN_PLAN_ID = ""
+ALLOWED_ORIGIN = "https://xulei1280-rgb.github.io"
+# P1-0 实测后填写并启用，绝不猜测退款状态或付款时间字段。
+AFDIAN_VERIFIED = "false"
+AFDIAN_REFUND_STATUS = ""
+AFDIAN_PAID_AT_FIELD = ""
+
+[triggers]
+crons = ["0 19 * * *"]

@@ -1,68 +1,45 @@
-"use strict";
-
-const assert = require("assert");
-const client = require("./deepseek-client.js");
-
-function mockResponse(body, ok = true, status = 200, statusText = "OK") {
-  return { ok, status, statusText, async json() { return body; } };
+'use strict';
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const fs = require('node:fs');
+const source = fs.readFileSync('deepseek-client.js', 'utf8');
+const token = 'a'.repeat(64);
+function load(storage = new Map()) {
+  const context = { localStorage: { getItem: k => storage.get(k) || null, setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) } };
+  vm.createContext(context); vm.runInContext(source, context); return context;
 }
-
+const response = (body, ok = true) => ({ ok, async json() { return body; } });
 async function run() {
-  assert.strictEqual(client.MODEL, "deepseek-v4-flash");
-  const directCalls = [];
-  const direct = await client.requestFinal({
-    apiKey: "sk-test",
-    messages: [{ role: "user", content: "test" }],
-    fetchImpl: async (_url, options) => {
-      directCalls.push(JSON.parse(options.body));
-      return mockResponse({ choices: [{ finish_reason: "stop", message: { content: "  final answer  " } }] });
-    },
-  });
-  assert.deepStrictEqual({ answer: direct.answer, retried: direct.retried }, { answer: "final answer", retried: false });
-  assert.strictEqual(directCalls.length, 1);
-  assert.deepStrictEqual(directCalls[0].thinking, { type: "enabled" });
-  assert.strictEqual(directCalls[0].reasoning_effort, "high");
-
-  const retryCalls = [];
-  let retryNotice = 0;
-  const recovered = await client.requestFinal({
-    apiKey: "sk-test",
-    messages: [{ role: "user", content: "test" }],
-    maxTokens: 16384,
-    onRetry() { retryNotice += 1; },
-    fetchImpl: async (_url, options) => {
-      const request = JSON.parse(options.body);
-      retryCalls.push(request);
-      if (retryCalls.length === 1) return mockResponse({ choices: [{ finish_reason: "length", message: { content: "", reasoning_content: "thinking" } }] });
-      return mockResponse({ choices: [{ finish_reason: "stop", message: { content: "recovered" } }] });
-    },
-  });
-  assert.deepStrictEqual({ answer: recovered.answer, retried: recovered.retried }, { answer: "recovered", retried: true });
-  assert.strictEqual(retryNotice, 1);
-  assert.strictEqual(retryCalls.length, 2);
-  assert.strictEqual(retryCalls[0].max_tokens, 16384);
-  assert.deepStrictEqual(retryCalls[1].thinking, { type: "disabled" });
-  assert.ok(!("reasoning_effort" in retryCalls[1]));
-
-  let filteredCalls = 0;
-  await assert.rejects(() => client.requestFinal({
-    apiKey: "sk-test",
-    fetchImpl: async () => {
-      filteredCalls += 1;
-      return mockResponse({ choices: [{ finish_reason: "content_filter", message: { content: "" } }] });
-    },
-  }), /内容过滤/);
-  assert.strictEqual(filteredCalls, 1);
-
-  await assert.rejects(() => client.requestFinal({
-    apiKey: "sk-test",
-    fetchImpl: async () => mockResponse({ error: { message: "invalid key" } }, false, 401, "Unauthorized"),
-  }), /DeepSeek 请求失败：invalid key/);
-
-  console.log("deepseek client checks ok: final answer fallback and API errors");
+  const storage = new Map([['qimen_deepseek_api_key', 'old-secret-never-send'], ['qimen_api_base', 'http://localhost:8787/']]);
+  const root = load(storage), client = root.DeepSeekClient, calls = [];
+  assert.equal(storage.has('qimen_deepseek_api_key'), false);
+  assert.equal(root.QIMEN_API_BASE, 'http://localhost:8787');
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    return response(url.endsWith('/credential') ? { credential: token } : { choices: [{ message: { content: ' answer ' } }] });
+  };
+  const results = await Promise.all([1, 2].map(() => client.requestFinal({ messages: [{ role: 'user', content: 'test' }], maxTokens: 16384, fetchImpl })));
+  assert.ok(results.every(r => r.answer === 'answer' && r.retried === false));
+  assert.equal(calls.filter(c => c.url.endsWith('/credential')).length, 1, 'parallel first requests share credential issuance');
+  const chats = calls.filter(c => c.url.endsWith('/chat'));
+  assert.equal(chats.length, 2); assert.equal(chats[0].init.headers.Authorization, 'Bearer ' + token);
+  assert.deepEqual(JSON.parse(chats[0].init.body), { messages: [{ role: 'user', content: 'test' }], max_tokens: 4096 });
+  assert.ok(!JSON.stringify(calls).includes('old-secret-never-send')); assert.ok(!JSON.stringify(calls).includes('model'));
+  assert.equal(storage.get('qimen_credential'), token);
+  let attempts = 0;
+  await assert.rejects(client.requestFinal({ fetchImpl: async () => { attempts++; return response({ choices: [{ finish_reason: 'length', message: { content: '' } }] }); } }), /重试会消耗额度/);
+  assert.equal(attempts, 1, 'no automatic retry');
+  attempts = 0;
+  await assert.rejects(client.requestFinal({ fetchImpl: async () => { attempts++; return response({ error: { code: 'quota_site', message: '今日全站额度已用完', retry_at: 123 } }, false); } }), e => e.code === 'quota_site' && e.retryAt === 123 && e.message === '今日全站额度已用完');
+  assert.equal(attempts, 1);
+  await assert.rejects(client.requestFinal({ fetchImpl: async () => response({ choices: [{ finish_reason: 'content_filter', message: { content: '' } }] }) }), /内容过滤/);
+  assert.equal(load().QIMEN_API_BASE, 'https://api.qimenbazi.cn');
+  for (const page of ['index.html', 'bazi.html', 'liuyao.html', 'ziwei.html', 'daily.html']) {
+    const html = fs.readFileSync(page, 'utf8');
+    assert.ok(html.includes('site-service.js?v=20261105.2'), page + ' shared feedback/support');
+    assert.doesNotMatch(html, /API_KEY_STORAGE|apiKey|API Key|api\.deepseek\.com/);
+  }
+  for (const path of ['deepseek-client.js', 'site-service.js', 'ziwei-page.js', 'README.md']) assert.doesNotMatch(fs.readFileSync(path, 'utf8'), /API_KEY_STORAGE|apiKey|API Key|api\.deepseek\.com/);
+  console.log('deepseek client checks ok: Worker-only requests, legacy secret removal, shared credential, limits, no automatic retries');
 }
-
-run().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+run().catch(error => { console.error(error); process.exitCode = 1; });

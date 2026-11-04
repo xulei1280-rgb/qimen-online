@@ -6,7 +6,7 @@ const {chromium, launchOptions, url} = require('./check-playwright-env.cjs');
   try {
     const page = await browser.newPage({viewport:{width:1440,height:1000}});
     const errors=[]; page.on('pageerror',e=>errors.push(e.message));
-    await page.route('**/api.deepseek.com/**',r=>r.abort());
+    await page.route('**/api.qimenbazi.cn/**',r=>r.abort());
     await page.goto(process.argv[2] || url('ziwei.html'));
     await page.evaluate(() => {
       const snapshot=ZiweiEngine.buildNatal({calendarType:'solar',date:'1993-07-14',time:'08:20',gender:'male',timeBasis:'beijing'});
@@ -26,8 +26,9 @@ const {chromium, launchOptions, url} = require('./check-playwright-env.cjs');
     const savedBefore=await page.evaluate(()=>localStorage.getItem('ziwei_records_v1'));
     assert.ok(await page.locator('#aiStyle').isVisible());
     assert.equal(await page.locator('#aiPanel .rule-chip').count(),0,'remove model badge from header');
-    const buttonColor=await page.locator('#openApiKey').evaluate(e=>getComputedStyle(e).backgroundColor);
-    assert.notEqual(buttonColor,'rgba(0, 0, 0, 0)','API button needs visible fill');
+    assert.equal(await page.locator('#openApiKey, #apiKeyDialog').count(),0,'removed user key controls');
+    assert.ok(await page.locator('#support-open').isVisible());
+    assert.ok(await page.locator('#feedback-open').isVisible());
     const usedPresets=new Set();
     for(const direction of ['comprehensive','natal','career','wealth','relationship','wellbeing','decadal','yearly']) {
       await page.locator('#aiMode').selectOption(direction);
@@ -38,16 +39,9 @@ const {chromium, launchOptions, url} = require('./check-playwright-env.cjs');
       assert.equal(await page.locator('#aiQuestion').inputValue(),(await page.locator('#aiPresetQuestions button').nth(5).innerText())+'。');
     }
     assert.equal(await page.locator('#aiSettings').evaluate(e=>e.tagName),'DIV');
-    assert.equal(await page.locator('#apiKey').isVisible(),false);
-    await page.locator('#openApiKey').click();
-    assert.ok(await page.locator('#apiKeyDialog').isVisible());
-    await page.locator('#apiKey').fill('test-local-key');
-    await page.locator('#saveApiKey').click();
-    assert.equal(await page.locator('#apiKeyDialog').isVisible(),false);
-    assert.equal(await page.evaluate(()=>localStorage.getItem('qimen_deepseek_api_key')),'test-local-key');
-    await page.locator('#openApiKey').click();await page.keyboard.press('Escape');
-    assert.equal(await page.locator('#apiKeyDialog').isVisible(),false);
-    assert.equal(await page.locator('#openApiKey').evaluate(e=>e===document.activeElement),true);
+    await page.evaluate(()=>localStorage.setItem('qimen_deepseek_api_key','obsolete'));
+    await page.reload(); await openRecord();
+    assert.equal(await page.evaluate(()=>localStorage.getItem('qimen_deepseek_api_key')),null);
     for(const style of ['detail','conclusion','palaces','timing','brief']) {
       await page.locator('#aiStyle').selectOption(style);
       const label=await page.locator('#aiStyle option:checked').innerText();
@@ -81,9 +75,9 @@ const {chromium, launchOptions, url} = require('./check-playwright-env.cjs');
     assert.equal(await page.locator('.turn-answer').isVisible(),false);
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     assert.ok(await page.locator('#aiMode').isVisible());
-    await page.locator('#openApiKey').click();assert.ok(await page.locator('#apiKeyDialog').isVisible());
-    assert.ok(await page.locator('#apiKeyDialog').evaluate(e=>e.getBoundingClientRect().width<=innerWidth));
-    await page.locator('#closeApiKey').click();
+    await page.locator('#feedback-open').click();assert.ok(await page.locator('#feedback-dialog').isVisible());
+    assert.ok(await page.locator('#feedback-dialog').evaluate(e=>e.getBoundingClientRect().width<=innerWidth));
+    await page.locator('#feedback-close').click();
     assert.deepEqual(errors,[]);
     console.log('PASS AI UI: keyboard fold/unfold, rerender state, cancel/delete/persist, quota rollback, removed import/export, mobile; no AI request.');
   } finally { await browser.close(); }

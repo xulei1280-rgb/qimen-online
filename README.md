@@ -14,9 +14,11 @@
 
 入口文件是 `index.html`。
 
-## API Key
+## AI 解读
 
-DeepSeek API Key 不写入源码。首次在新浏览器或手机上使用 AI 分析时，页面会提示输入 Key，并只保存到当前设备浏览器的 `localStorage`。
+AI 解读由本站服务提供，每日有免费额度。免费每凭证每天 5 次、每 IP 每天 20 次，全站每天 300 次；有效打赏凭证每天 20 次，不占 IP 额度，仍受全站上限。重试会消耗额度。
+
+服务端与部署步骤见 [worker/DEPLOY.md](worker/DEPLOY.md)。默认 API 地址为 `https://api.qimenbazi.cn`，本地测试可设置 `localStorage.qimen_api_base` 后刷新。
 
 ## 校验
 

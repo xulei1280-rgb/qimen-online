@@ -14,7 +14,7 @@ assert(html.includes('handleQimenAiKeydown(event)') && html.includes('handleQime
 assert(html.includes('function autoGrowQimenAiTextarea') && html.includes('max=164') && html.includes('function resetQimenAiTextarea'), 'Qimen question fields should auto-grow and reset after sending');
 assert(html.includes('function showQimenAiPending') && html.includes('id="qimenAiPending"') && html.includes('AI 正在分析 · 已用 '), 'Qimen AI should show an elapsed analysis status');
 assert(/async function analyzeWithAI\(\)[\s\S]*?showQimenAiPending\(aiRequestId\)[\s\S]*?clearQimenAiPending\(aiRequestId\)/.test(html), 'Qimen AI pending status should start and stop with each request');
-assert(html.includes('src="deepseek-client.js?v=20261105.1"') && html.includes('DeepSeekClient.requestFinal({apiKey:apiKey,messages:messages,maxTokens:16384'), 'Qimen AI should use the shared DeepSeek final-answer fallback');
+assert(html.includes('src="deepseek-client.js?v=20261105.2"') && html.includes('DeepSeekClient.requestFinal({messages:messages,maxTokens:4096'), 'Qimen AI should use the shared DeepSeek final-answer fallback');
 assert(html.includes('src="bazi-engine.js?v=20261105.1"') && html.includes('id="qimenBaziRecord"') && html.includes('function createQimenBaziProfile'), 'Qimen should support selecting or creating a linked Bazi profile');
 assert(html.includes('BAZI_RECORDS_STORAGE') && html.includes('BaziEngine.createBaziProfile') && html.includes('清除关联'), 'new Qimen Bazi profiles should reuse the Bazi record store and allow clearing');
 assert(html.includes('plateData.linkedBazi=cloneQimenBazi(qimenLinkedBazi)') && html.includes('qimenLinkedBazi=cloneQimenBazi(plateData.linkedBazi)'), 'Qimen plate creation and history loading should retain a frozen Bazi snapshot');

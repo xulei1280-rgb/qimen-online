@@ -38,7 +38,7 @@
       '<details><summary>使用与数据说明</summary><ul>' +
       '<li><strong>用途</strong>　按传统规则演示排盘方法，供学习参考，结果不保证准确。</li>' +
       '<li><strong>AI 可能出错</strong>　AI 解读由第三方大模型自动生成，可能有误或前后矛盾。</li>' +
-      '<li><strong>决策边界与数据</strong>　不作为医疗、法律、投资等决策依据。排盘和日记默认只存本机浏览器。使用 AI 时，相关盘面和问题会发送给 DeepSeek。</li>' +
+      '<li><strong>决策边界与数据</strong>　不作为医疗、法律、投资等决策依据。排盘和日记默认只存本机浏览器。使用 AI 时，相关盘面和问题会经本站服务转发给 DeepSeek；反馈内容、选填的联系方式和打赏订单记录由本站服务端保存，用于对应功能。</li>' +
       '</ul></details>';
     document.body.appendChild(footer);
   }

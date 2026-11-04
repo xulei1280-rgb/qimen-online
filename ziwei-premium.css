@@ -398,13 +398,6 @@ html[data-theme="dark"] .zw .zw-timeline li.current b,html[data-theme="dark"] .z
 .zw .zw-ai-settings .ai-mode-row{margin-top:0;background:none;padding:0}
 .zw .zw-ai-settings .ai-mode-row{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:600px){.zw .zw-ai-settings .ai-mode-row{grid-template-columns:1fr}}
-.zw .ai-header-tools{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:8px}
-.zw .ai-header-tools .api-key-button{min-height:36px;padding:6px 14px;font-size:12px;font-weight:600;border:0;border-radius:8px;background:#343d78;box-shadow:0 3px 8px -4px rgba(20,26,70,.35);color:#fffdf8;white-space:nowrap}
-.zw .ai-header-tools .api-key-button:hover{background:#262d58;color:#fffdf8}
-html[data-theme="dark"] .zw .ai-header-tools .api-key-button{background:#b9c3f2;color:#141a34}
-html[data-theme="dark"] .zw .ai-header-tools .api-key-button:hover{background:#d0d8ff;color:#141a34}
-.zw #apiKeyDialog{width:min(460px,calc(100% - 32px))}
-.zw #apiKeyDialog .field{margin-top:16px}
 .zw .ai-preset-list button{color:var(--zw-indigo-2);background:var(--zw-card-2);box-shadow:inset 0 0 0 1px var(--zw-indigo-line);text-align:left}
 .zw .ai-preset-list button:hover:not(:disabled){background:var(--zw-indigo-wash)}
 .zw .turn{background:var(--zw-card-2);box-shadow:inset 0 0 0 1px var(--zw-indigo-line)}

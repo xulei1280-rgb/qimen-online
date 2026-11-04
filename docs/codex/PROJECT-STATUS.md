@@ -25,6 +25,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P1 Worker / D1 / Frontend — 2026-11-05
+
+- 当前独立分支 `p1-backend`，本地基线 `5892be8`；`.git` 只读导致 fetch 无法更新 main，本次依用户要求不提交、不推送、不部署、不登录。新增 `worker/`（入口、D1 schema、Wrangler 配置、部署说明、无依赖 Node 测试），完成匿名哈希凭证、原子额度、失败退款、反馈、签名查单、幂等权益与 cron 对账；五页移除自填密钥和自动 AI 重试，共享 API 配置及反馈/打赏轮询，保留 P0 合规。
+- 验证：`node --test worker/test/*.test.js` 及 `--test-isolation=none` 展开的 26 项测试通过；7 个既有 JS 检查和 P0 合规检查通过。紫微检查因沙箱禁止 Node 启动 git，使用 shell 读取 main 的原始快照并通过临时 preload 提供给原断言，3714 项断言未跳过。3 个 Playwright 页面检查及环境辅助脚本因未安装 Playwright 自动 SKIP；沙箱也禁止本地端口和 Chrome 启动，未完成真实浏览器验收。生产前端指定密钥/直连地址扫描无匹配，语法与 diff 检查通过，排盘内核无改动。
+- 下一步：按 `worker/DEPLOY.md` 配置 D1/secrets/域名，由站长完成 P1-0 小额付款与退款实测、补齐已核实的付款时间字段与退款状态，再启用打赏。`AFDIAN_VERIFIED=false` 默认关闭打赏，不能按测试样例猜测协议。桌面用付款链接说明（未加二维码库）；找回码本期不做，清除凭证会失去权益访问。chat 请求上限 64 KiB（现有八字提示约 30 KB、一次追问约 54 KB），长对话到限时需新建解读。
+
 ### P0 Compliance / Page Titles and Descriptions — 2026-11-05
 
 - 当前工作在本机 `main`，基线 `3ae7a8f`。实现 P0-1 至 P0-7 与 P2-2，包含日运旧版本断言修正、六爻高风险象意分支、五页声明与共享发送确认。数据说明按用户要求省去尚未实现的服务端功能。

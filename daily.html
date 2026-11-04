@@ -336,8 +336,8 @@
 
           <section class="ai-sheet" aria-labelledby="aiTitle">
             <div class="section-heading"><div><p class="eyebrow">Reflection / 解读</p><h2 id="aiTitle">按需生成命理反馈</h2><p>已有结果按版本保留，不会因后来改日记而静默改写。</p></div></div>
-            <div class="privacy-note"><strong>隐私提示：</strong>周期 AI 不会发送任何日记正文。日记默认只在当前浏览器。点击生成后，仅勾选允许发送的当日事件会连同固定盘面事实发送给 DeepSeek；API Key 不进入导出文件。</div>
-            <div class="ai-toolbar"><div class="ai-model">deepseek-v4-flash · 思考<br>本地事实优先</div><button id="generateAiButton" class="primary" type="button" onclick="generateDailyAi()">生成今日详解</button></div>
+            <div class="privacy-note"><strong>隐私提示：</strong>周期 AI 不会发送任何日记正文。日记默认只在当前浏览器。点击生成后，仅勾选允许发送的当日事件会连同固定盘面事实发送给 DeepSeek。</div>
+            <div class="ai-toolbar"><div class="ai-model">deepseek-v4-flash<br>本地事实优先</div><button id="generateAiButton" class="primary" type="button" onclick="generateDailyAi()">生成今日详解</button></div>
             <div id="aiHistory" class="ai-history"></div>
           </section>
         </div>
@@ -363,13 +363,13 @@
   <script src="qimen.js"></script>
   <script src="bazi-engine.js?v=20261105.1"></script>
   <script src="daily-engine.js?v=20260817.4"></script>
-  <script src="site-notice.js?v=20261105.1"></script>
-  <script src="deepseek-client.js?v=20261105.1"></script>
+  <script src="site-notice.js?v=20261105.2"></script>
+  <script src="deepseek-client.js?v=20261105.2"></script>
+  <script src="site-service.js?v=20261105.2"></script>
   <script>
     var DAILY_DB_NAME='daily_journal_v1';
     var DAILY_DB_VERSION=2;
     var ACTIVE_PROFILE_STORAGE='daily_active_profile_v1';
-    var API_KEY_STORAGE='qimen_deepseek_api_key';
     var dailyDbPromise=null,activeProfile=null,activeDay=null,editingEntryId=null,aiPending=false,timelineAiPending='',activeView='today';
     var LEGACY_EVENT_CATEGORIES={人际:'人际合作',感情:'亲密关系',健康:'状态恢复'};
     var timelineState={profileId:'',initialized:false,openYear:null,openMonth:null,openDay:null},timelineNodeMap={},timelineChildrenMap={},timelineDaysByDate={},timelineAiByKey={},timelineRenderSequence=0;
@@ -584,18 +584,17 @@
       if(!items.length){box.innerHTML='<div class="empty-copy">没有调用 AI。本地日运已经可以单独使用。</div>';return}
       box.innerHTML=items.map(function(item){var diaryStale=item.type==='review'&&item.entryRevision!==(activeDay.entryRevision||0),engineStale=!!item.engineStale||item.promptVersion!==DailyFortuneEngine.promptVersion,stale=diaryStale||engineStale,reason=item.staleReason||(diaryStale?'日记内容后来有变化':'解释核心已升级');return '<details class="ai-card'+(stale?' stale':'')+'" '+(stale?'':'open')+'><summary><span><strong>'+aiTypeLabel(item.type)+'</strong> · 日记版本 '+item.entryRevision+(stale?' · 旧结果：'+esc(reason):'')+'</span><span>'+esc(new Date(item.createdAt).toLocaleString())+'</span></summary><div class="ai-answer">'+esc(item.answer)+'</div><p class="site-ai-notice">AI 生成内容，可能有误，请勿据此作重要决定。</p></details>'}).join('');
     }
-    function getApiKey(){var key=localStorage.getItem(API_KEY_STORAGE)||'';if(!key){key=prompt('请输入 DeepSeek API Key（只保存在当前浏览器）')||'';if(key.trim())localStorage.setItem(API_KEY_STORAGE,key.trim())}return key.trim()}
     async function generateDailyAi(){
       if(aiPending||!activeDay)return;
       var type=aiType(),selected=(activeDay.entries||[]).filter(function(item){return item.includeInAi!==false});
       if(type==='review'&&!selected.length){setStatus('当前日记都没有勾选发送给 AI。',true);return}
       var revision=activeDay.entryRevision||0,cacheKey=[type,revision,DailyFortuneEngine.promptVersion].join('|'),cached=(activeDay.ai||[]).find(function(item){return item.cacheKey===cacheKey});
       if(cached){setStatus('已显示这个版本的缓存结果，没有重复调用 AI。',false);return}
-      var key=getApiKey();if(!key)return;
+
       var requestKey=activeDay.key,requestRevision=revision,promptText=DailyFortuneEngine.buildAiPrompt(activeDay.snapshot,selected,type),button=document.getElementById('generateAiButton');
       aiPending=true;button.disabled=true;button.textContent='正在生成…';document.getElementById('aiHistory').insertAdjacentHTML('afterbegin','<div id="dailyAiPending" class="ai-pending" role="status">AI 正在核对固定盘面与日记</div>');
       try{
-        var result=await DeepSeekClient.requestFinal({apiKey:key,includeDiary:selected.length>0,messages:[{role:'system',content:'你是传统子平命理日运记录助手。固定干支事实不可改写，推断必须给依据、反向信号和不确定处。'},{role:'user',content:promptText}],maxTokens:4096});
+        var result=await DeepSeekClient.requestFinal({includeDiary:selected.length>0,messages:[{role:'system',content:'你是传统子平命理日运记录助手。固定干支事实不可改写，推断必须给依据、反向信号和不确定处。'},{role:'user',content:promptText}],maxTokens:4096});
         if(!activeDay||activeDay.key!==requestKey||activeDay.entryRevision!==requestRevision){setStatus('日记在分析期间发生变化，本次结果没有写入。',true);return}
         activeDay.ai=activeDay.ai||[];activeDay.ai.push({id:'ai-'+Date.now().toString(36),type:type,entryRevision:revision,cacheKey:cacheKey,promptVersion:DailyFortuneEngine.promptVersion,createdAt:isoNow(),answer:result.answer});
         await saveActiveDay();setStatus('AI 反馈已按版本保存。',false);
@@ -658,9 +657,9 @@
     async function generateTimelineAi(periodKey){
       var node=timelineNodeMap[periodKey];if(!node||timelineAiPending)return;var key=timelineAiKey(node),record=timelineAiByKey[key]||{key:key,profileId:activeProfile.id,level:node.level,periodKey:node.periodKey,history:[]},hash=DailyFortuneEngine.timelineFactsHash(node),cached=(record.history||[]).find(function(item){return item.factsHash===hash&&item.promptVersion===DailyFortuneEngine.timelinePromptVersion});
       if(cached){setStatus('已显示这个周期的缓存结果，没有重复调用AI。',false);return}
-      var apiKey=getApiKey();if(!apiKey)return;var profileId=activeProfile.id,promptText=DailyFortuneEngine.buildTimelineAiPrompt(activeProfile,node,timelineChildrenMap[node.periodKey]||[]);timelineAiPending=node.periodKey;await renderTimeline();
+      var profileId=activeProfile.id,promptText=DailyFortuneEngine.buildTimelineAiPrompt(activeProfile,node,timelineChildrenMap[node.periodKey]||[]);timelineAiPending=node.periodKey;await renderTimeline();
       try{
-        var result=await DeepSeekClient.requestFinal({apiKey:apiKey,messages:[{role:'system',content:'你是传统子平命理时间轴助手。固定干支事实不可改写，推断必须给依据、反向信号、不确定处和现实提醒。'},{role:'user',content:promptText}],maxTokens:4096});
+        var result=await DeepSeekClient.requestFinal({messages:[{role:'system',content:'你是传统子平命理时间轴助手。固定干支事实不可改写，推断必须给依据、反向信号、不确定处和现实提醒。'},{role:'user',content:promptText}],maxTokens:4096});
         if(!activeProfile||activeProfile.id!==profileId||!timelineNodeMap[periodKey]||DailyFortuneEngine.timelineFactsHash(timelineNodeMap[periodKey])!==hash){setStatus('时间轴在分析期间发生变化，本次结果没有写入。',true);return}
         record.history=record.history||[];record.history.push({id:'timeline-ai-'+Date.now().toString(36),factsHash:hash,promptVersion:DailyFortuneEngine.timelinePromptVersion,createdAt:isoNow(),answer:result.answer});record.updatedAt=isoNow();await storePut('timelineAi',record);setStatus('周期AI解读已按版本保存在本地。',false);
       }catch(error){setStatus('周期AI分析失败：'+error.message,true)}finally{timelineAiPending='';await renderTimeline()}
@@ -672,9 +671,9 @@
       var type=dayAiTypeFor(day),selected=(day.entries||[]).filter(function(item){return item.includeInAi!==false}),revision=day.entryRevision||0,cacheKey=[type,revision,DailyFortuneEngine.promptVersion].join('|');
       if((day.ai||[]).some(function(item){return item.cacheKey===cacheKey})){setStatus('已显示这个日期的缓存结果，没有重复调用AI。',false);return}
       if(type==='review'&&!selected.length){setStatus('这一天的日记都没有勾选发送给AI。',true);return}
-      var apiKey=getApiKey();if(!apiKey)return;var promptText=DailyFortuneEngine.buildAiPrompt(day.snapshot,selected,type);timelineAiPending='day:'+date;await renderTimeline();
+      var promptText=DailyFortuneEngine.buildAiPrompt(day.snapshot,selected,type);timelineAiPending='day:'+date;await renderTimeline();
       try{
-        var result=await DeepSeekClient.requestFinal({apiKey:apiKey,includeDiary:selected.length>0,messages:[{role:'system',content:'你是传统子平命理日运记录助手。固定干支事实不可改写，推断必须给依据、反向信号和不确定处。'},{role:'user',content:promptText}],maxTokens:4096}),fresh=await storeGet('days',key);
+        var result=await DeepSeekClient.requestFinal({includeDiary:selected.length>0,messages:[{role:'system',content:'你是传统子平命理日运记录助手。固定干支事实不可改写，推断必须给依据、反向信号和不确定处。'},{role:'user',content:promptText}],maxTokens:4096}),fresh=await storeGet('days',key);
         if(!fresh||fresh.entryRevision!==revision){setStatus('日记在分析期间发生变化，本次结果没有写入。',true);return}
         fresh.ai=fresh.ai||[];fresh.ai.push({id:'ai-'+Date.now().toString(36),type:type,entryRevision:revision,cacheKey:cacheKey,promptVersion:DailyFortuneEngine.promptVersion,createdAt:isoNow(),answer:result.answer});fresh.updatedAt=isoNow();await storePut('days',fresh);if(activeDay&&activeDay.key===key)activeDay=fresh;setStatus('每日AI解读已按版本保存在本地。',false);
       }catch(error){setStatus('每日AI分析失败：'+error.message,true)}finally{timelineAiPending='';await renderTimeline()}
@@ -687,7 +686,7 @@
     async function exportDailyData(){
       try{
         var payload={version:3,exportedAt:isoNow(),engineVersion:DailyFortuneEngine.version,promptVersion:DailyFortuneEngine.promptVersion,timelinePromptVersion:DailyFortuneEngine.timelinePromptVersion,profiles:await storeAll('profiles'),days:await storeAll('days'),timelineAi:await storeAll('timelineAi')};
-        var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='daily-journal-'+localToday()+'.json';link.click();setTimeout(function(){URL.revokeObjectURL(link.href)},1000);setStatus('已导出全部命主和日记；API Key 未包含。',false);
+        var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='daily-journal-'+localToday()+'.json';link.click();setTimeout(function(){URL.revokeObjectURL(link.href)},1000);setStatus('已导出全部命主和日记。',false);
       }catch(error){setStatus('导出失败：'+error.message,true)}
     }
     async function importDailyData(input){
