@@ -25,6 +25,13 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P1 Backend / Custom Domain Deployment — 2026-11-05
+
+- 本轮在 `p1-backend` 完成部署，按用户授权合并至 `main` 并推送两分支；前端根目录新增 `CNAME=qimenbazi.cn`，Worker 允许源改为 `https://qimenbazi.cn`，保留 `workers_dev=false`。
+- Worker `qimen-api` 已部署，版本 `48fe594b-7201-4124-a292-5276ac9e017c`，自定义域名 `api.qimenbazi.cn`；部署确认 cron `0 19 * * *` 已注册。
+- 验证：全部 15 个 `check-*.js` / `check-*.cjs` 已执行，10 个通过、5 个因缺少 Playwright 跳过（含共用环境脚本）；`cd worker && node --test test/*.test.js` 27/27 通过；`git diff --check` 通过。
+- 发布后继续核对 GitHub Pages 自定义域名、证书及强制 HTTPS、HTTP/HTTPS/www 跳转，以及生产凭证和单次“你好”chat 的 CORS；最终结果见本轮部署报告。爱发电实测开关保持关闭。
+
 ### P2 Analytics / Canonical / Sitemap — 2026-11-05
 
 - `p1-backend`：新增共享 `site-analytics.js`，唯一 `UMAMI_WEBSITE_ID` 占位默认为空，空值不加载第三方脚本；五页接入四类固定事件，只附页面标识，关闭 Umami 自动采集，不传业务资料、URL 参数、hash、referrer 或标题。五页 canonical、根目录 sitemap/robots 指向 `https://qimenbazi.cn/`；README 精简为用户介绍与开发说明；DEPLOY 补 Umami 注册/填 ID、域名绑定时再加 CNAME 和切换 Worker CORS 的步骤。本轮未新增 CNAME、未启用真实统计、未提交或部署。
