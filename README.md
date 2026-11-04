@@ -1,6 +1,9 @@
-# 奇门起盘分析
+# 奇门八字
 
-自用奇门遁甲起盘与 AI 分析网页。
+奇门、八字、六爻、紫微排盘的传统文化学习工具，排盘免费，AI 解读仅作学习参考。
+
+- 在线使用：https://xulei1280-rgb.github.io/qimen-online/
+- 支持作者（爱发电）：https://afdian.com/a/qimenbazi
 
 ## GitHub Pages
 
