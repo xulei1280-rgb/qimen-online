@@ -129,7 +129,11 @@ test('默认6元可改；金额只传下单，不展示价目表；保留墨金�
   const html = p.document.body.children[0].html, css = p.document.head.children[0].textContent;
   for (const text of ['请作者喝杯奶茶', '随缘量力，多一点支持，能有更多的 AI 次数。', '不设每日上限', '本设备凭证共 100 次免费 AI，每天最多 5 次', '实付不足 6 元不发次数包']) assert.ok(html.includes(text));
   assert.doesNotMatch(html, /600次|2500次|plan_id/);
-  for (const text of ['#support-open:hover', 'translateY(-2px)', 'prefers-reduced-motion:reduce', '#f4e0b4']) assert.ok(css.includes(text));
+  for (const text of ['#support-open:hover', 'translateY(-1px)', 'prefers-reduced-motion:reduce', 'border-radius:999px', 'linear-gradient(180deg,#f1dcab,#d2b277)', 'text-decoration:underline', 'text-align:right']) assert.ok(css.includes(text));
+  assert.ok(html.includes('class="support-open-icon" aria-hidden="true"><svg'));
+  assert.match(css, /\.site-service\{[^}]*padding:0;border:none;background:transparent;box-shadow:none/);
+  assert.match(css, /#feedback-open\{[^}]*border:none;border-radius:0;background:transparent;color:#8a6a2f/);
+  assert.doesNotMatch(css, /\.site-service button|filter:brightness|translateY\(-2px\)|scale\(/);
 });
 test('非法金额不建单或打开付款窗口；不足6元仍可自愿支持', async () => {
   let creates = 0;
