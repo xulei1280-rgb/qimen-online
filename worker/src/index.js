@@ -53,9 +53,10 @@ export async function refund(db, id, now) {
     if (!String(error.message).includes('refund_limit')) throw databaseError(error, now);
   }
 }
-async function jsonBody(request, max = 32768) {
+async function jsonBody(request, max = 32768, allowEmpty = false) {
   if (Number(request.headers.get('content-length')) > max) fail(413, 'body_too_large', '请求内容过长');
   const reader = request.body?.getReader();
+  if (!reader && allowEmpty) return null;
   if (!reader) fail(400, 'invalid_json', '请求内容不能为空');
   let size = 0;
   const chunks = [];
@@ -67,6 +68,7 @@ async function jsonBody(request, max = 32768) {
       if (size > max) { await reader.cancel(); fail(413, 'body_too_large', '请求内容过长'); }
       chunks.push(value);
     }
+    if (!size && allowEmpty) return null;
     const bytes = new Uint8Array(size);
     let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
@@ -176,11 +178,11 @@ export function createService({ db, fetchImpl = fetch, now = Date.now, pause = m
       const ip = hash(ipSource);
       let result;
       if (webhook && request.method === 'POST') {
-        paymentConfig(env);
         await rate(db, 'webhook', ip, time, 60);
-        const body = await jsonBody(request);
+        const body = await jsonBody(request, 32768, true);
         const id = body?.data?.order?.out_trade_no;
-        if (typeof id !== 'string' || !/^[\w-]{1,100}$/.test(id)) fail(400, 'invalid_order', '订单号无效');
+        if (typeof id !== 'string' || !/^[\w-]{1,100}$/.test(id)) return new Response(JSON.stringify({ ec: 200 }), { headers });
+        paymentConfig(env);
         const data = await queryOrders(env, { out_trade_no: id }, fetchImpl, time);
         const raw = data.list.find(order => order.out_trade_no === id);
         if (!raw) fail(502, 'order_not_found', '尚未查到对应订单');

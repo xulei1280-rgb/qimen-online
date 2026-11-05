@@ -25,6 +25,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P1 Worker / Afdian Webhook Test Acknowledgement — 2026-11-05
+
+- `main`：webhook 先限频再解析；空 body、缺失或非法订单号直接返回 `{"ec":200}`，跳过付款配置、查单与订单/权益写入；合法订单号沿用付款配置检查、查单与处理流程。
+- 验证：`cd worker && node --test test/*.test.js` 29/29 通过，覆盖未 verified 时空请求成功、合法订单号仍返回 503，以及测试请求限频；`git diff --check` 通过。
+- 按本轮用户要求仅本地提交，不 push、不部署；未改前端、生产 secret 或 verified 开关。下一步：部署后验证爱发电开发者页保存/发送测试。
+
 ### P1 Backend / Custom Domain Deployment — 2026-11-05
 
 - 本轮在 `p1-backend` 完成部署，按用户授权合并至 `main` 并推送两分支；前端根目录新增 `CNAME=qimenbazi.cn`，Worker 允许源改为 `https://qimenbazi.cn`，保留 `workers_dev=false`。

@@ -129,6 +129,34 @@ test('查单签名按协议拼接MD5，必须ec=200', async t => {
   const f = fixture(t, async () => queryResponse([], 400));
   const response = await callback(f, { out_trade_no: 'trade-1' }); assert.equal(response.response.status, 502); assert.notEqual(response.body.ec, 200);
 });
+test('webhook空body/缺失或非法订单号直接确认，未verified也不查单或改权益', async t => {
+  let calls = 0;
+  const f = fixture(t, async () => { calls++; throw new Error('不应查单'); }), id = f.identity();
+  for (const settings of [env, { ...env, AFDIAN_VERIFIED: 'false' }]) {
+    for (const body of [undefined, null, {}, { data: {} }, { data: { order: {} } },
+      ...[null, 123, {}, [], '', 'bad/id', 'a'.repeat(101)].map(out_trade_no => ({ data: { order: { out_trade_no } } }))]) {
+      const r = await f.request('/webhook/' + env.WEBHOOK_PATH_SECRET, { body, origin: null, settings });
+      assert.equal(r.response.status, 200); assert.deepEqual(r.body, { ec: 200 });
+    }
+    const empty = await f.service.handle(new Request('https://api.test/webhook/' + env.WEBHOOK_PATH_SECRET, {
+      method: 'POST', headers: { 'CF-Connecting-IP': '1.2.3.4' }, body: ''
+    }), settings);
+    assert.equal(empty.status, 200); assert.deepEqual(await empty.json(), { ec: 200 });
+  }
+  const r = await callback(f, { out_trade_no: 'trade-1' }, { settings: { ...env, AFDIAN_VERIFIED: 'false' } });
+  assert.equal(r.response.status, 503); assert.equal(r.body.error.code, 'payment_unavailable');
+  assert.equal(calls, 0);
+  assert.equal(f.db.raw.prepare('SELECT count(*) n FROM orders').get().n, 0);
+  assert.equal(f.db.raw.prepare('SELECT expires_at FROM credentials WHERE hash=?').get(id.credential).expires_at, 0);
+});
+test('webhook测试请求仍受现有限频约束', async t => {
+  const f = fixture(t), settings = { ...env, AFDIAN_VERIFIED: 'false' };
+  for (let i = 0; i < 60; i++) {
+    assert.equal((await f.request('/webhook/' + env.WEBHOOK_PATH_SECRET, { origin: null, settings })).response.status, 200);
+  }
+  const r = await f.request('/webhook/' + env.WEBHOOK_PATH_SECRET, { origin: null, settings });
+  assert.equal(r.response.status, 429); assert.equal(r.body.error.code, 'rate_limit');
+});
 test('webhook假关联号/零元/错方案不生效，回调字段无法代替查单', async t => {
   let raw;
   const f = fixture(t, async () => queryResponse([raw])), id = f.identity(), ref = linked(f, id);
