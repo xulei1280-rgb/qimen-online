@@ -35,6 +35,9 @@
       var error = new Error(body.error && body.error.message || '本站服务暂时不可用，请稍后再试。');
       error.code = body.error && body.error.code;
       error.retryAt = body.error && body.error.retry_at;
+      if (['quota_credential', 'quota_ip', 'quota_site'].includes(error.code)) {
+        error.message = '今天的免费 AI 次数用完了，排盘还能继续用。AI 解读有一点成本；若喜欢本站，可以点「请作者喝杯奶茶」。不支持也完全没问题。';
+      }
       throw error;
     }
     return body;

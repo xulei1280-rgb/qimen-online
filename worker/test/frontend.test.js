@@ -74,7 +74,7 @@ test('桌面点击解锁生成同订单二维码和后备链接，5秒轮询成�
   assert.equal(p.opens(), 0); assert.equal(p.nodes.get('support-link').children[0].rel, 'noopener noreferrer');
   assert.equal(p.timers.size, 1); const timer = [...p.timers.values()][0]; assert.equal(timer.ms, 5000);
   await timer.fn(); await flush();
-  assert.equal(p.nodes.get('service-status').textContent, '已解锁至 2026-12-05'); assert.equal(p.timers.size, 0);
+  assert.equal(p.nodes.get('service-status').textContent, '已支持，AI 次数包有效至 2026-12-05'); assert.equal(p.timers.size, 0);
   assert.equal(p.storage.has('qimen_pending_order'), false); assert.equal(calls.length, 4);
   assert.equal(p.nodes.get('support-dialog').open, false);
   assert.deepEqual(p.analytics, ['点击打赏', '点击打赏']);

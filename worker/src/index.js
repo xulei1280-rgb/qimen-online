@@ -90,7 +90,7 @@ export function validateChat(body) {
     messages: [{ role: 'system', content: messages.filter(m => m.role === 'system').map(m => m.content).join('\n') + '\n' + POLICY }, ...messages.filter(m => m.role !== 'system')] };
 }
 function paymentConfig(env) {
-  if (env.AFDIAN_VERIFIED !== 'true' || !env.AFDIAN_PLAN_ID || !env.AFDIAN_TOKEN || !env.AFDIAN_PAID_AT_FIELD || !env.AFDIAN_REFUND_STATUS || env.AFDIAN_REFUND_STATUS === '2') fail(503, 'payment_unavailable', '打赏解锁尚未开放');
+  if (env.AFDIAN_VERIFIED !== 'true' || !env.AFDIAN_PLAN_ID || !env.AFDIAN_TOKEN || !env.AFDIAN_PAID_AT_FIELD || !env.AFDIAN_REFUND_STATUS || env.AFDIAN_REFUND_STATUS === '2') fail(503, 'payment_unavailable', '支持功能即将开放');
 }
 export function signQuery(env, params, ts) {
   return createHash('md5').update(env.AFDIAN_TOKEN + 'params' + params + 'ts' + ts + 'user_id' + env.AFDIAN_USER_ID).digest('hex');
