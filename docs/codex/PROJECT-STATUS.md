@@ -25,6 +25,14 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P1 Tip Pack Worker Deployment — 2026-11-05
+
+- 从 `main@9164d5e` 部署；指定 `0002-tip-pack.sql` 仅执行一次成功（23 条查询），未重跑 schema.sql。
+- Worker `qimen-api` 版本 `3cfd0960-6191-48cb-a9b2-d62fab4d700b`，`api.qimenbazi.cn` 与 cron 已部署；`AFDIAN_VERIFIED="false"` 保持关闭。
+- 验证：Worker 测试 42/42；线上空 webhook 200 / `{"ec":200}`，凭证接口 OPTIONS 204；无健康路由，`/health` 返回 404。
+- 限制：迁移前 export 因认证错误 10000 未生成备份；后续迁移及部署成功。未真实付款、退款或调用 AI。报告 `/workspace/qimen-tip-pack-deploy/report.md`。
+- 下一步：完成真实付款/退款协议验收前继续保持 verified 关闭；不要重跑迁移。
+
 ### P1 Tip Pack v1 — 2026-11-05
 
 - 工作分支 `ui/support-float-polish`，最新 `origin/main` 为 `d65d548`；保留分支两笔墨金/动效提交，按需求完成免费凭证终身 100 次且每天 5 次、自选金额次数包、30 天累加/顺延与逐订单退款回收；IP/全站额度只用于免费请求。默认 6 元可改，`custom_price` 下单，签名查单实付决定权益，不依赖固定方案。
