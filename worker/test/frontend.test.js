@@ -266,7 +266,7 @@ test('漏斗：未开放只计失败，重试成功；复用订单不重计，pa
   assert.deepEqual(p.analytics, ['点击打赏', '打赏建单失败', '打赏建单成功', '打赏到账']);
 });
 
-test('金额确认复用居中展示，标题承担初始焦点，隐藏输入无required', async () => {
+test('自定义金额失焦或change更新居中展示，按钮文案不变且无确认按钮', async () => {
   for (const mobile of [false, true]) {
     const amounts = [], p = page({ mobile, request: async (path, options) => {
       if (path === '/api/order') amounts.push(options.body.amount);
@@ -280,17 +280,27 @@ test('金额确认复用居中展示，标题承担初始焦点，隐藏输入�
     assert.doesNotMatch(html.match(/<input id="support-amount"[^>]*>/)[0], /required|autofocus/);
     assert.match(html, /class="support-amount-unit">元/);
     assert.match(p.document.head.children[0].textContent, /#support-dialog #support-default\{text-align:center/);
-    p.nodes.get('support-custom').onclick();
-    p.nodes.get('support-amount').value = '5';
-    p.nodes.get('support-custom').onclick();
-    assert.equal(p.nodes.get('support-custom-field').hidden, false);
-    assert.equal(p.nodes.get('support-amount-display').textContent, '6');
-    p.nodes.get('support-amount').value = '018';
-    p.nodes.get('support-custom').onclick();
-    assert.equal(p.nodes.get('support-custom-field').hidden, true);
-    assert.equal(p.nodes.get('support-amount-display').textContent, '18');
-    assert.equal(p.nodes.get('support-default').hidden, false);
-    assert.equal(p.nodes.get('support-custom').textContent, '自定义');
+    const input = p.nodes.get('support-amount'), custom = p.nodes.get('support-custom');
+    custom.onclick();
+    assert.equal(custom.textContent, '自定义');
+    assert.doesNotMatch(html, /确认金额/);
+    for (const event of ['onblur', 'onchange']) {
+      for (const value of ['', '0', '5', '-1', '6.5', '1e2', '1000000000']) {
+        input.value = value;
+        input.focused = false;
+        const previous = p.nodes.get('support-amount-display').textContent;
+        input[event]();
+        assert.equal(p.nodes.get('support-amount-display').textContent, previous);
+        assert.equal(p.nodes.get('service-status').textContent, '支持金额最低 6 元，请填写正整数');
+        assert.equal(input.focused, false, '软提示不抢焦点或重新打开键盘');
+      }
+      input.value = event === 'onblur' ? '012' : '018';
+      input[event]();
+      assert.equal(p.nodes.get('support-amount-display').textContent, event === 'onblur' ? '12' : '18');
+      assert.equal(p.nodes.get('support-default').hidden, false);
+      assert.equal(custom.textContent, '自定义');
+      assert.equal(p.nodes.get('support-custom-field').hidden, false);
+    }
     await p.nodes.get('support-pay').onclick();
     assert.deepEqual(amounts, ['18']);
     p.nodes.get('support-close').onclick(); p.nodes.get('support-open').onclick();

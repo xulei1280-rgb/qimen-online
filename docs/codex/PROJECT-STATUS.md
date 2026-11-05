@@ -25,6 +25,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P1 Tip Amount Blur — 2026-11-05
+
+- 基于最新 `origin/main@06869d0`：自定义按钮始终保留原文案；输入 blur/change 复用金额校验，自动更新居中金额与既有“元”展示。非法金额软提示、保留有效展示且不抢焦点；打开默认 6 元、不聚焦输入，其他软句与漏斗不变。五页共享缓存 `.16`。
+- 验证：`node --test worker/test/*.test.js` 48/48；`node check-deepseek-client.js`、`node check-bazi-page.js`、`node --check site-service.js`、`git diff --check` 通过。
+- 交付：本轮提交并推送 `origin/main`；报告 `/workspace/qimen-tip-amount-blur/report.md`。未做真实浏览器/实体 iOS 键盘验收、未真实付款；下一步手机验收点空白及键盘完成导致失焦后的金额展示。
+
 ### P1 Tip Funnel — 2026-11-05
 
 - 基线 `main@10d4a6f`，保留此前移动入口未提交改动；复用 Umami 新增建单成功/失败与 paid 到账事件，连同已有点击事件形成三步漏斗，仅固定事件名与 page。支付和 verified 未改，无迁移；五页服务缓存 `.13`、统计缓存 `.2`。DEPLOY 已写查询及前端到账计数局限。

@@ -124,25 +124,20 @@
     function confirmAmount() {
       var amount = customAmount ? $('support-amount').value.trim() : '6';
       if (!/^\d{1,9}$/.test(amount) || Number(amount) < 6) {
-        status('支持金额最低 6 元，请填写正整数'); $('support-amount').focus(); return;
+        status('支持金额最低 6 元，请填写正整数'); return;
       }
       amount = String(Number(amount));
       $('support-amount').value = amount;
       $('support-amount-display').textContent = amount;
-      $('support-custom-field').hidden = true;
-      $('support-custom').textContent = '自定义';
       return amount;
     }
     $('support-custom').onclick = function () {
-      if (!$('support-custom-field').hidden) {
-        if (confirmAmount()) $('support-title').focus();
-        return;
-      }
       customAmount = true;
-      $('support-custom').textContent = '确认金额';
       $('support-custom-field').hidden = false;
       $('support-amount').focus();
     };
+    $('support-amount').onblur = confirmAmount;
+    $('support-amount').onchange = confirmAmount;
     $('support-open').onclick = function () {
       if (!desktop() && !expanded) { if (progress > 0) setExpanded(true); return; }
       customAmount = false;
