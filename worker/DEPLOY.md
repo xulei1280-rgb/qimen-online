@@ -24,7 +24,7 @@ node --test worker/test/*.test.js
    wrangler d1 execute qimen --remote --file=migrations/0002-tip-pack.sql
    ```
    迁移保留凭证、订单及反馈，按实付金额回填次数包；旧模型没有逐订单扣次，保留的付费请求按付款先后归到未退款包。免费终身池仅能回填仍保留的未退还免费请求，已被旧 cron 清理的历史无法恢复，迁移后永久累计；不重置匿名凭证。
-4. 使用爱发电**一次性自选金额**，无需固定方案或 `AFDIAN_PLAN_ID`。创作者 ID 已填 `ce5512ded87411f1a31d52540025c377`。前端默认 6 元可改，`POST /api/order` 请求体为 `{"amount":"6.00"}`，生成 `custom_price` + `custom_order_id` 链接；权益只按签名查单 `total_amount` 实付发放，忽略展示价及方案 ID。不要把 token 写进配置文件。
+4. 使用爱发电**一次性自选金额**，无需固定方案或 `AFDIAN_PLAN_ID`。创作者 ID 已填 `ce5512ded87411f1a31d52540025c377`。前端默认 6 元、仅可输入正整数元，`POST /api/order` 请求体为 `{"amount":"6"}`，生成 `custom_price` + `custom_order_id` 链接；权益只按签名查单 `total_amount` 实付发放，忽略展示价及方案 ID。不要把 token 写进配置文件。
 5. 逐个设置三个 secrets，交互输入，勿写入源码、截图、日志或命令历史：
    ```sh
    wrangler secret put DEEPSEEK_API_KEY
@@ -65,7 +65,7 @@ node --test worker/test/*.test.js
 
 - `wrangler d1 execute qimen --local --file=schema.sql`，配置本地 `.dev.vars`（不提交），再运行 `wrangler dev`。前端通过静态 HTTP 服务打开，Worker 的本地 `ALLOWED_ORIGIN` 改为该精确源，例如 `http://127.0.0.1:8000`。
 - 在前端控制台执行 `localStorage.setItem('qimen_api_base','http://127.0.0.1:8787')` 后刷新；恢复生产用 `localStorage.removeItem('qimen_api_base')` 后刷新。变更后端数据库后，测试凭证也需清除 `qimen_credential`。生产不会自动清除匿名凭证。
-- 免费 AI 每设备凭证终身共 100 次，每天最多 5 次、20/IP/天、全站 300/天；IP 与全站额度仅用于免费请求。打赏每笔 `max(floor(实付元×25), 档底)` 次，≥6 元档底 150、≥18 元 600、≥68 元 2500，实付不足 6 元只确认支持、不发权益。有效次数包不设每日上限，不检查或占用免费池、IP 日额/短限频或全站额度；仍保留每凭证 10 秒 1 次的防重复短限频。UTC+8 日桶。请求预占与退款在 D1 SQL 事务内完成；D1 失败不调用 AI。[D1 batch 回滚语义](https://developers.cloudflare.com/d1/worker-api/d1-database/#batch)用于保证触发器报错时整体回滚。
+- 免费 AI 每设备凭证终身共 100 次，每天最多 5 次、20/IP/天、全站 300/天；IP 与全站额度仅用于免费请求。打赏每笔 `max(floor(实付元×25), 档底)` 次，≥6 元档底 150、≥18 元 600、≥68 元 2500，实付不足 6 元按 floor(cents/4) 发放，零元不生效。有效次数包不设每日上限，不检查或占用免费池、IP 日额/短限频或全站额度；仍保留每凭证 10 秒 1 次的防重复短限频。UTC+8 日桶。请求预占与退款在 D1 SQL 事务内完成；D1 失败不调用 AI。[D1 batch 回滚语义](https://developers.cloudflare.com/d1/worker-api/d1-database/#batch)用于保证触发器报错时整体回滚。
 - AI 固定地址与 `deepseek-v4-flash`，输出最多 4096 tokens，关闭模型思考输出。根据现有八字完整提示词约 30 KB、单次追问约 54 KB，chat 请求体上限定为 **64 KiB**，最多 40 条消息、总输入 24000 字符；超出会在扣额前拒绝，不截断盘面。其它 JSON 默认 32 KiB，反馈 8 KiB。上游超时 60 秒；5xx/网络超时每天每凭证最多退还 3 次，4xx 不退。前端所有自动 AI 重试均已移除。
 - 短限频：chat 每凭证每 10 秒 1 次，免费 IP 每 10 秒 10 次；凭证发放每 IP 每分钟 10 次；反馈每 IP 每分钟 3 次、每天 10 次；创建订单每 IP 每分钟 5 次；查单每 IP 每分钟 60 次、每凭证每分钟 15 次；webhook 每 IP 每分钟 60 次。仅使用 Cloudflare `CF-Connecting-IP`，忽略 `X-Forwarded-For`。
 - 每 5 秒轮询，最多 10 分钟；支付后、页面恢复可见/焦点时自动确认。点击“请作者喝杯奶茶”先打开金额弹窗。桌面宽屏（非移动 UA 且宽度至少 768px）编辑金额后点击“生成付款二维码”，在原生弹窗生成爱发电付款二维码，使用本地 MIT `vendor/qrcode-generator.js`，并保留“在新窗口打开”链接；付款成功自动关闭弹窗。手机端打开付款窗口。浏览器阻止窗口时手机端直接跳转，返回后可从本机保存的关联号继续轮询。

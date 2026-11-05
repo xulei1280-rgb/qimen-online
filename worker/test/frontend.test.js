@@ -76,9 +76,13 @@ test('桌面选择金额后生成同订单二维码和后备链接，5秒轮询�
   assert.equal(p.opens(), 0); assert.equal(p.nodes.get('support-link').children[0].rel, 'noopener noreferrer');
   assert.equal(p.timers.size, 1); const timer = [...p.timers.values()][0]; assert.equal(timer.ms, 5000);
   await timer.fn(); await flush();
-  assert.equal(p.nodes.get('service-status').textContent, '已支持，AI 次数包剩余 150 次，有效至 2026-12-05'); assert.equal(p.timers.size, 0);
+  assert.equal(p.nodes.get('service-status').textContent, '感谢支持，心意已收到。'); assert.equal(p.timers.size, 0);
   assert.equal(p.storage.has('qimen_pending_order'), false); assert.equal(calls.length, 4);
   assert.equal(p.nodes.get('support-dialog').open, false);
+  assert.equal(p.nodes.get('support-success-dialog').open, true);
+  assert.equal(p.nodes.get('support-success-detail').textContent, 'AI 次数包剩余 150 次，有效至 2026-12-05');
+  p.nodes.get('support-success-close').onclick();
+  assert.equal(p.nodes.get('support-success-dialog').open, false);
   assert.deepEqual(p.analytics, ['点击打赏', '点击打赏']);
 });
 test('手机付款窗口/返回焦点触发；保存的关联号可在重载后继续查询', async () => {
@@ -117,18 +121,19 @@ test('非移动UA窄屏保持原链接流程，不自动创建订单或显示二
 test('默认6元可改；金额只传下单，不展示价目表；保留墨金动效和减少动态适配', async () => {
   const calls = [], p = page({ request: async (path, options) => {
     calls.push({ path, options });
-    return path === '/api/order' ? { ref: 'b'.repeat(64), url: 'https://afdian.com/order/create?custom_price=18.50' } : { status: 'pending' };
+    return path === '/api/order' ? { ref: 'b'.repeat(64), url: 'https://afdian.com/order/create?custom_price=18' } : { status: 'pending' };
   } });
   assert.equal(p.nodes.get('support-amount').value, '6');
   p.nodes.get('support-open').onclick();
-  p.nodes.get('support-amount').value = '18.50';
+  p.nodes.get('support-amount').value = '18';
   await p.nodes.get('support-pay').onclick(); await flush();
-  assert.deepEqual(JSON.parse(JSON.stringify(calls[0])), { path: '/api/order', options: { method: 'POST', body: { amount: '18.50' } } });
-  assert.equal(JSON.parse(p.storage.get('qimen_pending_order')).amount, '18.50');
-  assert.equal(p.qrUrls[0], 'https://afdian.com/order/create?custom_price=18.50');
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0])), { path: '/api/order', options: { method: 'POST', body: { amount: '18' } } });
+  assert.equal(JSON.parse(p.storage.get('qimen_pending_order')).amount, '18');
+  assert.equal(p.qrUrls[0], 'https://afdian.com/order/create?custom_price=18');
   const html = p.document.body.children[0].html, css = p.document.head.children[0].textContent;
+  assert.match(html, /min="1" max="999999999" step="1" value="6" inputmode="numeric"/);
   for (const text of ['请作者喝杯奶茶', '随缘量力，多一点支持，能有更多的 AI 次数。', '不设每日上限']) assert.ok(html.includes(text));
-  assert.doesNotMatch(html, /600次|2500次|plan_id|本设备凭证共|次数包每笔有效|不发次数包/);
+  assert.doesNotMatch(html, /600次|2500次|plan_id|本设备凭证共|次数包每笔有效|不发次数包|纯打赏|少于 6 元|不增加 AI 次数/);
   for (const text of ['#support-open:hover', 'translateY(-1px)', 'prefers-reduced-motion:reduce', 'border-radius:999px', 'linear-gradient(180deg,#f1dcab,#d2b277)', 'text-decoration:underline', 'text-align:right']) assert.ok(css.includes(text));
   assert.ok(html.includes('class="support-open-icon" aria-hidden="true"><svg'));
   assert.match(css, /\.site-service\{[^}]*padding:0;border:none;background:transparent;box-shadow:none/);
@@ -138,7 +143,7 @@ test('默认6元可改；金额只传下单，不展示价目表；保留墨金�
 test('非法金额不建单或打开付款窗口；不足6元仍可自愿支持', async () => {
   let creates = 0;
   const p = page({ mobile: true, request: async path => { if (path === '/api/order') creates++; return { ref: 'a'.repeat(64), url: 'https://afdian.com/order/create', status: 'pending' }; } });
-  for (const value of ['', '0', '-1', '6.001', '1e2', 'NaN']) {
+  for (const value of ['', '0', '-1', '6.001', '1.5', '6.00', '1e2', 'NaN', '1000000000']) {
     p.nodes.get('support-amount').value = value;
     await p.nodes.get('support-pay').onclick();
   }
@@ -149,13 +154,28 @@ test('非法金额不建单或打开付款窗口；不足6元仍可自愿支持'
 
 test('不足6元实付和退款会结束轮询，给出对应软提示', async () => {
   for (const [result, expected] of [
-    [{ status: 'paid', granted: 0, remaining: 0, expires_at: 0 }, '感谢支持。少于 6 元算纯打赏，不增加 AI 次数。'],
+    [{ status: 'paid', granted: 125, remaining: 125, expires_at: 0 }, '感谢支持，心意已收到。'],
     [{ status: 'refunded' }, '该订单已退款，对应权益已撤回。']
   ]) {
     const p = page({ request: async path => path === '/api/order' ? { ref: 'a'.repeat(64), url: 'https://afdian.com/order/create' } : result });
     p.nodes.get('support-amount').value = '5';
     await p.nodes.get('support-pay').onclick(); await flush();
     assert.equal(p.nodes.get('service-status').textContent, expected);
+    assert.equal(p.nodes.get('support-success-dialog').open, result.status === 'paid');
     assert.equal(p.storage.has('qimen_pending_order'), false); assert.equal(p.timers.size, 0);
+  }
+});
+
+test('手机与重载后确认付款均显示成功弹窗，缺少有效期不显示日期', async () => {
+  for (const mobile of [true, false]) {
+    const stored = new Map([['qimen_pending_order', JSON.stringify({ ref: 'a'.repeat(64), started: 1000000 })]]);
+    const p = page({ mobile, stored, request: async () => ({ status: 'paid', granted: 0, remaining: 0 }) });
+    await flush();
+    assert.equal(p.nodes.get('support-success-dialog').open, true);
+    assert.equal(p.nodes.get('support-success-detail').textContent, 'AI 次数包剩余 0 次');
+    assert.equal(p.nodes.get('service-status').textContent, '感谢支持，心意已收到。');
+    assert.equal(stored.has('qimen_pending_order'), false);
+    await p.events.get('focus')();
+    assert.equal(p.timers.size, 0);
   }
 });

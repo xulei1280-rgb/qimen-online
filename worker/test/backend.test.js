@@ -164,10 +164,10 @@ test('webhook测试请求仍受现有限频约束', async t => {
   const r = await f.request('/webhook/' + env.WEBHOOK_PATH_SECRET, { origin: null, settings });
   assert.equal(r.response.status, 429); assert.equal(r.body.error.code, 'rate_limit');
 });
-test('webhook假关联号/零元/不足6元不生效，回调字段无法代替查单', async t => {
+test('webhook假关联号/零元不生效，回调字段无法代替查单', async t => {
   let raw;
   const f = fixture(t, async () => queryResponse([raw])), id = f.identity(), ref = linked(f, id);
-  for (const change of [{ custom_order_id: 'f'.repeat(64) }, { total_amount: '0.00' }, { total_amount: '5.99' }]) {
+  for (const change of [{ custom_order_id: 'f'.repeat(64) }, { total_amount: '0.00' }]) {
     raw = order(ref, { ...change, out_trade_no: 'no-grant-' + String(Object.values(change)[0]).replaceAll('.', '-') }); const r = await callback(f, raw); assert.equal(r.response.status, 200);
     assert.equal(f.db.raw.prepare('SELECT expires_at FROM credentials').get().expires_at, 0);
   }
@@ -274,13 +274,13 @@ test('余额并发拒绝原因是凭证额度，退款回滚不影响其它计�
 });
 
 test('金额按分解析并折算：小数向下取整、6/18/68档底及线性金额越档', () => {
-  for (const [yuan, credits] of [['0', 0], ['5.99', 0], ['6', 150], ['6.03', 150], ['6.04', 151],
+  for (const [yuan, credits] of [['0', 0], ['0.01', 0], ['0.04', 1], ['1', 25], ['5', 125], ['5.99', 149], ['6', 150], ['6.03', 150], ['6.04', 151],
     ['17.99', 449], ['18', 600], ['24', 600], ['24.04', 601], ['67.99', 1699], ['68', 2500], ['100', 2500], ['100.04', 2501], ['999999999.99', 24999999999]]) {
     assert.equal(packCredits(amountCents(yuan)), credits, yuan);
   }
   for (const invalid of [null, undefined, {}, [], true, -6, '6.001', '1e2', 'NaN', 'Infinity', '', ' 6', '1000000000']) assert.equal(amountCents(invalid), null);
 });
-test('下单金额校验；不依赖plan_id，实付决定次数、零元不赠送、不足6元确认但不发包', async t => {
+test('下单金额校验；不依赖plan_id，实付决定次数、零元不赠送、不足6元按线性发包', async t => {
   let raw;
   const f = fixture(t, async () => queryResponse(raw ? [raw] : [])), id = f.identity();
   for (const body of [null, {}, { amount: 0 }, { amount: '-6' }, { amount: '6.001' }, { amount: '1e2' }, { amount: [] }, { amount: 6, plan_id: 'x' }]) {
@@ -298,8 +298,8 @@ test('下单金额校验；不依赖plan_id，实付决定次数、零元不赠�
   raw = order(small, { out_trade_no: 'small', total_amount: '5.99' });
   await callback(f, raw);
   r = await f.request('/api/order-status?ref=' + small, { token: id.token, method: 'GET' });
-  assert.equal(r.body.status, 'paid'); assert.equal(r.body.granted, 0); assert.equal(r.body.remaining, 600);
-  assert.equal(r.body.expires_at, START + MONTH);
+  assert.equal(r.body.status, 'paid'); assert.equal(r.body.granted, 149); assert.equal(r.body.remaining, 749);
+  assert.equal(r.body.expires_at, START + 2 * MONTH);
 });
 test('免费池终身100次、每天5次；午夜和cron清理不重置；耗尽不带次日重试承诺', async t => {
   const f = fixture(t), id = f.identity();

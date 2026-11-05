@@ -25,12 +25,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
-### P1 Support Copy Soften — 2026-11-05
+### P1 Tip Linear — 2026-11-05
 
-- `main`：删除支持弹窗免费额度/次数包细则整段；零次到账提示改为“感谢支持。少于 6 元算纯打赏，不增加 AI 次数。”；五页共享脚本缓存升至 `20261105.10`，同步测试断言。
-- Worker 无同类用户文案需改；`cents < 600` 返回 0 的业务门槛保持不变。
-- 验证：Worker 42/42；客户端、八字页面、二维码检查以及修改 JS 语法、diff 检查通过。未做浏览器视觉验收、真实付款或 Worker 部署。
-- 交付：本轮提交并推送 `origin/main`；报告 `/workspace/qimen-copy-soften/report.md`。下一步：验收前端发布后的新文案。
+- 基线 `main@53b82a5`；取消不足 6 元门槛，按 `max(floor(cents/4), 达标档底)` 发放；整数元输入与墨金到账弹窗，五页缓存 `.11`；软句、免费池和 verified 保持原样，无 SQL 变更。
+- 验证：Worker 三个测试文件通过；客户端、二维码、基线、八字、日运、六爻、奇门、P0、P2 及语法/diff 检查通过。紫微检查被 `spawnSync git EPERM` 阻止，4 项 Playwright 检查因未安装跳过。
+- 交付受环境限制：`.git` 只读，pull/add/commit 无法执行，尚未 push；`npx wrangler deploy` 因 npm registry DNS `EAI_AGAIN` 失败。未真实付款或浏览器视觉验收。
+- 下一步：在可写 Git 且可联网的环境提交推送并完成 Worker 部署，无需迁移。
 
 ### P1 Tip Pack Worker Deployment — 2026-11-05
 

@@ -120,8 +120,8 @@ export function amountCents(value) {
   return Number(yuan) * 100 + Number(fraction.padEnd(2, '0'));
 }
 export function packCredits(cents) {
-  if (cents < 600) return 0;
-  return Math.max(Math.floor(cents / 4), cents >= 6800 ? 2500 : cents >= 1800 ? 600 : 150);
+  if (cents <= 0) return 0;
+  return Math.max(Math.floor(cents / 4), cents >= 6800 ? 2500 : cents >= 1800 ? 600 : cents >= 600 ? 150 : 0);
 }
 export function normalizeOrder(raw, env, now) {
   const id = raw?.out_trade_no, ref = raw?.custom_order_id;
