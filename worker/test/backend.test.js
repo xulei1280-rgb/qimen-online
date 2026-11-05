@@ -283,7 +283,7 @@ test('金额按分解析并折算：小数向下取整、6/18/68档底及线性�
 test('下单金额校验；不依赖plan_id，实付决定次数、零元不赠送、不足6元按线性发包', async t => {
   let raw;
   const f = fixture(t, async () => queryResponse(raw ? [raw] : [])), id = f.identity();
-  for (const body of [null, {}, { amount: 0 }, { amount: '-6' }, { amount: '6.001' }, { amount: '1e2' }, { amount: [] }, { amount: 6, plan_id: 'x' }]) {
+  for (const body of [null, {}, { amount: 0 }, { amount: 5 }, { amount: '5.99' }, { amount: '-6' }, { amount: '6.001' }, { amount: '1e2' }, { amount: [] }, { amount: 6, plan_id: 'x' }]) {
     const r = await f.request('/api/order', { token: id.token, body });
     assert.equal(r.response.status, 400); f.advance(61000);
   }

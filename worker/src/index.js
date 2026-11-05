@@ -247,7 +247,7 @@ export function createService({ db, fetchImpl = fetch, now = Date.now, pause = m
         const body = await jsonBody(request);
         if (!body || typeof body !== 'object' || Object.keys(body).some(k => k !== 'amount')) fail(400, 'invalid_amount', '请填写支持金额（元）');
         const cents = amountCents(body.amount);
-        if (cents === null || cents <= 0) fail(400, 'invalid_amount', '支持金额须大于 0，最多两位小数');
+        if (cents === null || cents < 600) fail(400, 'invalid_amount', '支持金额最低 6 元，最多两位小数');
         const ref = random();
         await batch(db, [stmt(db, 'INSERT INTO order_refs VALUES (?,?,?)', ref, credential.hash, time)], time);
         const link = new URL('https://afdian.com/order/create');

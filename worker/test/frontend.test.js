@@ -118,7 +118,8 @@ test('反馈失败可再提交；支付创建失败关闭预开的手机窗口�
 test('非移动UA窄屏保持原链接流程，不自动创建订单或显示二维码', async () => {
   let calls = 0;
   const p = page({ width: 600, request: async path => { calls++; return path === '/api/order' ? { ref: 'a'.repeat(64), url: 'https://afdian.com/order/create?custom_order_id=test' } : { status: 'pending' }; } });
-  p.nodes.get('support-open').onclick(); assert.equal(calls, 0);
+  p.context.scrollY = 1000; p.events.get('scroll')();
+  p.nodes.get('support-open').onclick(); p.nodes.get('support-open').onclick(); assert.equal(calls, 0);
   assert.equal(p.nodes.get('support-pay').textContent, '打开付款页');
   await p.nodes.get('support-pay').onclick(); await flush();
   assert.equal(p.qrUrls.length, 0); assert.equal(p.nodes.get('support-qr').hidden, true);
@@ -132,13 +133,13 @@ test('默认6元可改；金额只传下单，不展示价目表；保留墨金�
   } });
   assert.equal(p.nodes.get('support-amount').value, '6');
   p.nodes.get('support-open').onclick();
-  p.nodes.get('support-amount').value = '18';
+  p.nodes.get('support-custom').onclick(); p.nodes.get('support-amount').value = '18';
   await p.nodes.get('support-pay').onclick(); await flush();
   assert.deepEqual(JSON.parse(JSON.stringify(calls[0])), { path: '/api/order', options: { method: 'POST', body: { amount: '18' } } });
   assert.equal(JSON.parse(p.storage.get('qimen_pending_order')).amount, '18');
   assert.equal(p.qrUrls[0], 'https://afdian.com/order/create?custom_price=18');
   const html = p.document.body.children[0].html, css = p.document.head.children[0].textContent;
-  assert.match(html, /min="1" max="999999999" step="1" value="6" inputmode="numeric"/);
+  assert.match(html, /min="6" max="999999999" step="1" value="6" inputmode="numeric"/);
   for (const text of ['请作者喝杯奶茶', '随缘量力，多一点支持，能有更多的 AI 次数。', '不设每日上限']) assert.ok(html.includes(text));
   assert.doesNotMatch(html, /600次|2500次|plan_id|本设备凭证共|次数包每笔有效|不发次数包|纯打赏|少于 6 元|不增加 AI 次数/);
   for (const text of ['#support-open:hover', 'translateY(-1px)', 'prefers-reduced-motion:reduce', 'border-radius:999px', 'linear-gradient(180deg,#f1dcab,#d2b277)', 'text-decoration:underline', 'text-align:right']) assert.ok(css.includes(text));
@@ -147,15 +148,15 @@ test('默认6元可改；金额只传下单，不展示价目表；保留墨金�
   assert.match(css, /#feedback-open\{[^}]*border:none;border-radius:0;background:transparent;color:#8a6a2f/);
   assert.doesNotMatch(css, /\.site-service button|filter:brightness|translateY\(-2px\)|scale\(/);
 });
-test('非法金额不建单或打开付款窗口；不足6元仍可自愿支持', async () => {
+test('非法金额不建单或打开付款窗口；不足6元拒绝建单', async () => {
   let creates = 0;
   const p = page({ mobile: true, request: async path => { if (path === '/api/order') creates++; return { ref: 'a'.repeat(64), url: 'https://afdian.com/order/create', status: 'pending' }; } });
-  for (const value of ['', '0', '-1', '6.001', '1.5', '6.00', '1e2', 'NaN', '1000000000']) {
-    p.nodes.get('support-amount').value = value;
+  for (const value of ['', '0', '5', '5.99', '-1', '6.001', '1.5', '6.00', '1e2', 'NaN', '1000000000']) {
+    p.nodes.get('support-custom').onclick(); p.nodes.get('support-amount').value = value;
     await p.nodes.get('support-pay').onclick();
   }
   assert.equal(creates, 0); assert.equal(p.opens(), 0);
-  p.nodes.get('support-amount').value = '5'; await p.nodes.get('support-pay').onclick();
+  p.nodes.get('support-custom').onclick(); p.nodes.get('support-amount').value = '6'; await p.nodes.get('support-pay').onclick();
   assert.equal(creates, 1); assert.equal(p.opens(), 1);
 });
 
@@ -164,9 +165,9 @@ test('不足6元实付和退款会结束轮询，给出对应软提示', async (
     [{ status: 'paid', granted: 125, remaining: 125, expires_at: 0 }, '感谢支持，心意已收到。'],
     [{ status: 'refunded' }, '该订单已退款，对应权益已撤回。']
   ]) {
-    const p = page({ request: async path => path === '/api/order' ? { ref: 'a'.repeat(64), url: 'https://afdian.com/order/create' } : result });
-    p.nodes.get('support-amount').value = '5';
-    await p.nodes.get('support-pay').onclick(); await flush();
+    const stored = new Map([['qimen_pending_order', JSON.stringify({ ref: 'a'.repeat(64), amount: '5', started: 1000000 })]]);
+    const p = page({ stored, request: async () => result });
+    await flush();
     assert.equal(p.nodes.get('service-status').textContent, expected);
     assert.equal(p.nodes.get('support-success-dialog').open, result.status === 'paid');
     assert.equal(p.storage.has('qimen_pending_order'), false); assert.equal(p.timers.size, 0);
@@ -187,41 +188,57 @@ test('手机与重载后确认付款均显示成功弹窗，缺少有效期不�
   }
 });
 
-test('手机初始隐藏，时间区后线性露头且封顶；点击展开、右滑收回、回顶部隐藏', () => {
-  const p = page({ mobile: true }), drawer = p.nodes.get('service-drawer'), peek = p.nodes.get('service-peek');
+test('原胶囊线性露茶杯；首次点击只展开，第二次才记漏斗并开弹窗；右滑收回', () => {
+  const p = page({ mobile: true }), drawer = p.nodes.get('service-drawer'), button = p.nodes.get('support-open');
   const scroll = y => { p.context.scrollY = y; p.events.get('scroll')(); };
+  assert.equal(p.nodes.has('service-peek'), false);
   assert.equal(drawer.classList.contains('service-hidden'), true);
-  assert.equal(peek.hidden, true);
-  scroll(200); assert.equal(peek.hidden, true);
-  scroll(400); assert.equal(peek.style['--service-reveal'], '22px');
-  scroll(600); assert.equal(peek.style['--service-reveal'], '44px');
-  scroll(1000); assert.equal(peek.style['--service-reveal'], '44px');
-  peek.onclick(); assert.equal(drawer.classList.contains('service-hidden'), false);
-  assert.equal(peek.hidden, true); assert.equal(p.nodes.get('support-dialog').open, false);
+  scroll(200); assert.equal(drawer.classList.contains('service-hidden'), true);
+  scroll(400); assert.equal(drawer.style['--service-reveal'], '18.5px');
+  scroll(600); assert.equal(drawer.style['--service-reveal'], '37px');
+  scroll(1000); assert.equal(drawer.style['--service-reveal'], '37px');
+  button.onclick(); assert.equal(drawer.classList.contains('service-collapsed'), false);
+  assert.equal(p.nodes.get('support-dialog').open, false); assert.deepEqual(p.analytics, []);
+  button.onclick(); assert.equal(p.nodes.get('support-dialog').open, true);
+  assert.deepEqual(p.analytics, ['点击打赏']);
   drawer.touchstart({ touches: [{ clientX: 10, clientY: 10 }] });
   drawer.touchend({ changedTouches: [{ clientX: 20, clientY: 100 }] });
-  assert.equal(drawer.classList.contains('service-hidden'), false, '纵滑不关闭');
+  assert.equal(drawer.classList.contains('service-collapsed'), false);
   drawer.touchstart({ touches: [{ clientX: 10, clientY: 10 }] });
   drawer.touchend({ changedTouches: [{ clientX: 80, clientY: 15 }] });
-  assert.equal(drawer.classList.contains('service-hidden'), true); assert.equal(peek.hidden, false);
-  scroll(0); assert.equal(peek.hidden, true);
+  assert.equal(drawer.classList.contains('service-collapsed'), true);
+  scroll(0); assert.equal(drawer.classList.contains('service-hidden'), true);
 });
-test('桌面始终完整显示，窄屏/移动UA适用隐藏，无锚点从一屏后露头', () => {
+test('桌面完整显示；手机无锚点从一屏后露头', () => {
   const p = page(), drawer = p.nodes.get('service-drawer');
-  assert.equal(drawer.classList.contains('service-hidden'), false);
   assert.equal(drawer.classList.contains('service-mobile'), false);
-  assert.equal(p.nodes.get('service-peek').hidden, true);
+  assert.equal(drawer.classList.contains('service-hidden'), false);
   p.context.innerWidth = 390; p.events.get('resize')();
   assert.equal(drawer.classList.contains('service-hidden'), true);
   p.context.innerWidth = 1440; p.events.get('resize')();
   assert.equal(drawer.classList.contains('service-hidden'), false);
   const fallback = page({ mobile: true, anchorBottom: null });
-  fallback.context.scrollY = 800; fallback.events.get('scroll')();
-  assert.equal(fallback.nodes.get('service-peek').hidden, true);
   fallback.context.scrollY = 1000; fallback.events.get('scroll')();
-  assert.equal(fallback.nodes.get('service-peek').style['--service-reveal'], '22px');
+  assert.equal(fallback.nodes.get('service-drawer').style['--service-reveal'], '18.5px');
 });
-
+test('每次打开默认静态6元，不聚焦输入；自定义才显示，默认付款忽略隐藏值', async () => {
+  const calls = [], p = page({ request: async (path, options) => {
+    if (path === '/api/order') calls.push(options.body.amount);
+    return { ref: 'a'.repeat(64), url: 'https://afdian.com/order/create', status: 'pending' };
+  } });
+  p.nodes.get('support-open').onclick();
+  assert.equal(p.nodes.get('support-custom-field').hidden, true);
+  assert.equal(p.nodes.get('support-amount').focused, undefined);
+  p.nodes.get('support-amount').value = '18';
+  await p.nodes.get('support-pay').onclick();
+  assert.deepEqual(calls, ['6']);
+  p.nodes.get('support-custom').onclick();
+  assert.equal(p.nodes.get('support-custom-field').hidden, false);
+  assert.equal(p.nodes.get('support-amount').focused, true);
+  p.nodes.get('support-open').onclick();
+  assert.equal(p.nodes.get('support-custom-field').hidden, true);
+  assert.match(p.document.head.children[0].textContent, /#support-amount\{font-size:16px\}/);
+});
 
 test('漏斗：未开放只计失败，重试成功；复用订单不重计，paid仅确认一次', async () => {
   let unavailable = true, paid = false;
@@ -233,10 +250,10 @@ test('漏斗：未开放只计失败，重试成功；复用订单不重计，pa
     return { status: paid ? 'paid' : 'pending' };
   } });
   p.nodes.get('support-open').onclick();
-  p.nodes.get('support-amount').value = '0';
+  p.nodes.get('support-custom').onclick(); p.nodes.get('support-amount').value = '0';
   await p.nodes.get('support-pay').onclick();
   assert.deepEqual(p.analytics, ['点击打赏']);
-  p.nodes.get('support-amount').value = '6';
+  p.nodes.get('support-custom').onclick(); p.nodes.get('support-amount').value = '6';
   await p.nodes.get('support-pay').onclick();
   assert.equal(p.nodes.get('service-status').textContent, '支持功能即将开放');
   unavailable = false;

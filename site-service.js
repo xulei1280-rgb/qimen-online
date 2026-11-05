@@ -15,22 +15,21 @@
       '<p role="status" id="feedback-status"></p><div class="service-actions"><button type="button" id="feedback-close">关闭</button><button type="submit" id="feedback-submit">发给作者</button></div></form></dialog>' +
       '<dialog class="service-dialog" id="support-dialog" aria-labelledby="support-title"><h2 id="support-title">请作者喝杯奶茶</h2>' +
       '<p>排盘可以一直免费用。AI 解读有模型费用，所以每天有少量免费次数；用完仍可看盘，只是暂时不能再问 AI。</p><p>愿意的话可自愿支持——支持后这台设备获得 AI 次数包，不设每日上限。打不打赏都不影响内容。</p>' +
-      '<label>支持金额（元）<input id="support-amount" type="number" min="1" max="999999999" step="1" value="6" inputmode="numeric" required></label><p>随缘量力，多一点支持，能有更多的 AI 次数。</p>' +
+      '<p id="support-default">支持金额：6 元</p><button type="button" id="support-custom">自定义</button><label id="support-custom-field" hidden>支持金额（元）<input id="support-amount" type="number" min="6" max="999999999" step="1" value="6" inputmode="numeric" placeholder="最低 6 元" required></label><p>随缘量力，多一点支持，能有更多的 AI 次数。</p>' +
       '<div class="support-qr" id="support-qr" hidden role="img" aria-label="付款二维码"></div><p id="support-scan" hidden>用手机微信或支付宝扫码即可；付款后本页会自动确认。</p>' +
       '<p id="support-link"></p><p role="status" id="support-status"></p><div class="service-actions"><button type="button" id="support-close">关闭</button><button type="button" id="support-pay">打开付款页</button></div></dialog>' +
       '<dialog class="service-dialog" id="support-success-dialog" aria-labelledby="support-success-title"><h2 id="support-success-title">感谢支持，心意已收到。</h2><p id="support-success-detail"></p><div class="service-actions"><button type="button" id="support-success-close">关闭</button></div></dialog>';
-    root.innerHTML += '<button type="button" id="service-peek" aria-label="展开支持与反馈入口" aria-controls="service-drawer" aria-expanded="false" hidden><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 9.5h12.5a1.5 1.5 0 0 1 1.5 1.5v1.2c0 2.9-2.1 5.3-5 5.8V20H9v-1.999a6.5 6.5 0 0 1-4.5-6.2V9.5Z" stroke="#1b1814" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 10.5h1.2A2.3 2.3 0 0 1 22 12.8v0A2.3 2.3 0 0 1 19.7 15H18.2" stroke="#1b1814" stroke-width="1.6" stroke-linecap="round"/><path d="M9 4.5c.4 1 .4 1.8 0 2.6M12 4c.5 1.1.5 2 0 3M15 4.5c.4 1 .4 1.8 0 2.6" stroke="#8a6a2f" stroke-width="1.4" stroke-linecap="round"/></svg></button>';
-    style.textContent += '#service-peek{position:fixed;right:0;bottom:144px;z-index:100;box-sizing:border-box;width:44px;height:48px;padding:9px;border:1px solid rgba(110,84,44,.26);border-radius:24px 0 0 24px;background:linear-gradient(180deg,#fffdf8,#eddfbf);box-shadow:none;cursor:pointer;transform:translateX(calc(100% - var(--service-reveal,0px)));touch-action:pan-y}#service-peek svg{display:block;width:24px;height:24px}#service-peek[hidden]{display:none}.site-service.service-mobile{transition:transform .25s ease,visibility .25s;touch-action:pan-y}.site-service.service-mobile.service-hidden{transform:translateX(calc(100% + 16px));visibility:hidden;pointer-events:none}@media(prefers-reduced-motion:reduce){.site-service.service-mobile{transition:none}}';
+    style.textContent += '#support-amount{font-size:16px}#support-amount::placeholder{color:#a2978a}.service-dialog [hidden]{display:none}.site-service.service-mobile{touch-action:pan-y;transition:transform .25s ease}.site-service.service-mobile.service-collapsed{transform:translateX(calc(100% + 16px - var(--service-reveal,0px)));transition:none;clip-path:inset(0)}.service-mobile.service-collapsed #support-open{align-self:flex-start;transform:none}.service-mobile.service-collapsed #feedback-open,.service-mobile.service-collapsed #service-status{visibility:hidden}.site-service.service-mobile.service-hidden{visibility:hidden;pointer-events:none}@media(prefers-reduced-motion:reduce){.site-service.service-mobile{transition:none}}';
     document.body.appendChild(root);
     var $ = function (id) { return document.getElementById(id); };
     var pending, timer, polling = false;
     function desktop() { return !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && window.innerWidth >= 768; }
-    var drawer = $('service-drawer'), peek = $('service-peek'), expanded = false, progress = 0, touchStart;
+    var drawer = $('service-drawer'), supportOpen = $('support-open'), expanded = false, progress = 0, touchStart;
     function setExpanded(value) {
       expanded = value;
-      drawer.classList.toggle('service-hidden', !desktop() && !expanded);
-      peek.hidden = desktop() || expanded || progress <= 0;
-      peek.setAttribute('aria-expanded', String(expanded));
+      drawer.classList.toggle('service-collapsed', !desktop() && !expanded);
+      drawer.classList.toggle('service-hidden', !desktop() && !expanded && progress <= 0);
+      supportOpen.setAttribute('aria-expanded', String(desktop() || expanded));
     }
     function updateFloat(initial) {
       drawer.classList.toggle('service-mobile', !desktop());
@@ -40,11 +39,10 @@
       var anchor = Array.from(anchors).find(function (node) { return node.getClientRects().length; });
       var start = anchor ? anchor.getBoundingClientRect().bottom + window.scrollY : window.innerHeight;
       progress = initial === true ? 0 : Math.max(0, Math.min(1, (window.scrollY - start) / (window.innerHeight * .5)));
-      peek.style.setProperty('--service-reveal', (44 * progress) + 'px');
+      drawer.style.setProperty('--service-reveal', (37 * progress) + 'px');
       if (!progress) expanded = false;
       setExpanded(expanded);
     }
-    peek.onclick = function () { if (progress > 0) { setExpanded(true); $('support-open').focus(); } };
     drawer.addEventListener('touchstart', function (event) {
       touchStart = event.touches.length === 1 ? event.touches[0] : null;
     }, { passive: true });
@@ -52,13 +50,13 @@
       if (!desktop() && expanded && touchStart && event.changedTouches.length) {
         var dx = event.changedTouches[0].clientX - touchStart.clientX;
         var dy = event.changedTouches[0].clientY - touchStart.clientY;
-        if (dx > 40 && dx > Math.abs(dy)) { setExpanded(false); peek.focus(); }
+        if (dx > 40 && dx > Math.abs(dy)) { setExpanded(false); supportOpen.focus(); }
       }
       touchStart = null;
     }, { passive: true });
     drawer.addEventListener('touchcancel', function () { touchStart = null; }, { passive: true });
     drawer.addEventListener('keydown', function (event) {
-      if (!desktop() && event.key === 'Escape') { setExpanded(false); peek.focus(); }
+      if (!desktop() && event.key === 'Escape') { setExpanded(false); supportOpen.focus(); }
     });
     window.addEventListener('scroll', updateFloat, { passive: true });
     window.addEventListener('resize', updateFloat);
@@ -122,12 +120,25 @@
       } catch (error) { $('feedback-status').textContent = error.message; }
       finally { $('feedback-submit').disabled = false; }
     };
+    var customAmount = false;
+    $('support-custom').onclick = function () {
+      customAmount = true;
+      $('support-default').hidden = true;
+      $('support-custom-field').hidden = false;
+      $('support-amount').focus();
+    };
     $('support-open').onclick = function () {
+      if (!desktop() && !expanded) { if (progress > 0) setExpanded(true); return; }
+      customAmount = false;
+      $('support-default').hidden = false;
+      $('support-custom-field').hidden = true;
+      $('support-amount').value = '6';
       if (window.SiteAnalytics) window.SiteAnalytics.track('点击打赏');
       $('support-dialog').showModal();
       $('support-pay').textContent = desktop() ? '生成付款二维码' : '打开付款页';
-      if (pending && pending.url) {
-        $('support-amount').value = String(Math.max(1, Math.round(Number(pending.amount) || 6)));
+      $('support-qr').replaceChildren(); $('support-link').replaceChildren();
+      $('support-qr').hidden = $('support-scan').hidden = true;
+      if (pending && pending.url && pending.amount === '6') {
         showPayment(pending);
       }
       if (pending) poll();
@@ -135,9 +146,9 @@
     $('support-success-close').onclick = function () { $('support-success-dialog').close(); };
     $('support-close').onclick = function () { $('support-dialog').close(); };
     $('support-pay').onclick = async function () {
-      var amount = $('support-amount').value.trim();
-      if (!/^\d{1,9}$/.test(amount) || Number(amount) <= 0) {
-        status('支持金额须为正整数（元）'); $('support-amount').focus(); return;
+      var amount = customAmount ? $('support-amount').value.trim() : '6';
+      if (!/^\d{1,9}$/.test(amount) || Number(amount) < 6) {
+        status('支持金额最低 6 元，请填写正整数'); $('support-amount').focus(); return;
       }
       amount = String(Number(amount));
       var mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
