@@ -25,6 +25,18 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P1 Tip Funnel — 2026-11-05
+
+- 基线 `main@10d4a6f`，保留此前移动入口未提交改动；复用 Umami 新增建单成功/失败与 paid 到账事件，连同已有点击事件形成三步漏斗，仅固定事件名与 page。支付和 verified 未改，无迁移；五页服务缓存 `.13`、统计缓存 `.2`。DEPLOY 已写查询及前端到账计数局限。
+- 验证：Worker/frontend 46/46；P2 隐私白名单、客户端、八字、两份 JS 语法与 diff 检查通过；未真实付款或线上统计验收。Umami ID 仍为空。
+- 交付：`.git` 只读阻止 pull/add，未 commit/push，无法核实最新 origin/main；指定报告路径只读，报告暂存 `/tmp/qimen-tip-funnel-report.md`。下一步在可写 Git 环境复核远端及既有改动后提交推送，配置 Umami ID 并验收。
+
+### P1 Mobile Float — 2026-11-05
+
+- 基线 `main@10d4a6f`；五页手机入口初始隐藏，滚过可见时间输入后用半屏距离线性露出茶杯（最多 44px，不露文案），点击抽出完整入口、右滑/Escape 收回，回顶部隐藏；桌面沿用 desktop() 完整显示。共享缓存 `.12`；付款、成功弹窗、软句和 Worker 实现未改。
+- 验证：Worker/frontend 45/45；客户端、二维码、基线、八字、日运、六爻、奇门、P0、P2 通过；紫微 Node 启动 Git 受限，使用 shell 读取的 main 快照通过全部 3714 断言；JS 语法和 diff 检查通过。4 项 Playwright 入口因未安装跳过，未验收浏览器外观或实体手机。
+- 交付限制：`.git` 只读，无法 pull/commit，push 因 GitHub DNS 失败；指定报告路径只读，暂存 `/tmp/qimen-mobile-float-report.md`。下一步在 Git 可写环境复核最新 main、提交推送，并补手机视觉/手势验收。
+
 ### P1 Tip Linear — 2026-11-05
 
 - 基线 `main@53b82a5`；取消不足 6 元门槛，按 `max(floor(cents/4), 达标档底)` 发放；整数元输入与墨金到账弹窗，五页缓存 `.11`；软句、免费池和 verified 保持原样，无 SQL 变更。

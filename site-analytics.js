@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const UMAMI_WEBSITE_ID = '';
-  var events = ['排盘完成', 'AI 解读调用', '反馈提交', '点击打赏'];
+  var events = ['排盘完成', 'AI 解读调用', '反馈提交', '点击打赏', '打赏建单成功', '打赏建单失败', '打赏到账'];
   var pages = ['index.html', 'bazi.html', 'liuyao.html', 'ziwei.html', 'daily.html'];
 
   window.SiteAnalytics = { track: function (event) {

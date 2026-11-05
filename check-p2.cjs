@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const read = file => fs.readFileSync(path.join(__dirname, file), 'utf8');
 const source = read('site-analytics.js');
-const events = ['排盘完成', 'AI 解读调用', '反馈提交', '点击打赏'];
+const events = ['排盘完成', 'AI 解读调用', '反馈提交', '点击打赏', '打赏建单成功', '打赏建单失败', '打赏到账'];
 const pages = ['index.html', 'bazi.html', 'liuyao.html', 'ziwei.html', 'daily.html'];
 function load(enabled, page = 'index.html') {
   const scripts = [], sent = [];
@@ -31,7 +31,7 @@ async function main() {
     assert.equal(p.scripts[0].attributes['data-auto-track'], 'false');
     for (const event of events) p.context.SiteAnalytics.track(event, { question: 'private', chart: 'private', diary: 'private', credential: 'private' });
     p.context.SiteAnalytics.track('其它事件');
-    assert.equal(p.sent.length, 4);
+    assert.equal(p.sent.length, events.length);
     assert.deepEqual(JSON.parse(JSON.stringify(p.sent)), events.map(event => ({ website: 'test-website', hostname: 'qimenbazi.cn', url: '/' + (page === 'index.html' ? '' : page), name: event, data: { page } })));
     assert.ok(!JSON.stringify(p.sent).includes('private'));
     p.context.umami = undefined; assert.doesNotThrow(() => p.context.SiteAnalytics.track(events[0]));
@@ -58,6 +58,6 @@ async function main() {
   assert.match(read('sitemap.xml'), /xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9"/);
   assert.match(read('robots.txt'), /^Sitemap: https:\/\/qimenbazi\.cn\/sitemap\.xml$/m);
   await new Promise(resolve => setImmediate(resolve));
-  console.log('PASS P2: optional Umami, four private-data-free events, failure isolation, five canonicals, descriptions, sitemap and robots');
+  console.log('PASS P2: optional Umami, seven private-data-free events, failure isolation, five canonicals, descriptions, sitemap and robots');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

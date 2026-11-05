@@ -6,7 +6,7 @@
     document.head.appendChild(style);
     style.textContent += '.service-dialog [hidden]{display:none}.support-qr{text-align:center}.support-qr svg{display:block;width:256px;max-width:100%;height:auto;margin:12px auto;background:#fff}';
     var root = document.createElement('div');
-    root.innerHTML = '<div class="site-service"><button type="button" id="support-open"><span class="support-open-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 9.5h12.5a1.5 1.5 0 0 1 1.5 1.5v1.2c0 2.9-2.1 5.3-5 5.8V20H9v-1.999a6.5 6.5 0 0 1-4.5-6.2V9.5Z" stroke="#1b1814" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 10.5h1.2A2.3 2.3 0 0 1 22 12.8v0A2.3 2.3 0 0 1 19.7 15H18.2" stroke="#1b1814" stroke-width="1.6" stroke-linecap="round"/><path d="M9 4.5c.4 1 .4 1.8 0 2.6M12 4c.5 1.1.5 2 0 3M15 4.5c.4 1 .4 1.8 0 2.6" stroke="#8a6a2f" stroke-width="1.4" stroke-linecap="round"/></svg></span>请作者喝杯奶茶</button><button type="button" id="feedback-open">说说想法</button><span id="service-status" role="status"></span></div>' +
+    root.innerHTML = '<div class="site-service" id="service-drawer"><button type="button" id="support-open"><span class="support-open-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 9.5h12.5a1.5 1.5 0 0 1 1.5 1.5v1.2c0 2.9-2.1 5.3-5 5.8V20H9v-1.999a6.5 6.5 0 0 1-4.5-6.2V9.5Z" stroke="#1b1814" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 10.5h1.2A2.3 2.3 0 0 1 22 12.8v0A2.3 2.3 0 0 1 19.7 15H18.2" stroke="#1b1814" stroke-width="1.6" stroke-linecap="round"/><path d="M9 4.5c.4 1 .4 1.8 0 2.6M12 4c.5 1.1.5 2 0 3M15 4.5c.4 1 .4 1.8 0 2.6" stroke="#8a6a2f" stroke-width="1.4" stroke-linecap="round"/></svg></span>请作者喝杯奶茶</button><button type="button" id="feedback-open">说说想法</button><span id="service-status" role="status"></span></div>' +
       '<dialog class="service-dialog" id="feedback-dialog" aria-labelledby="feedback-title"><form id="feedback-form"><h2 id="feedback-title">有想法跟我说</h2>' +
       '<p class="feedback-lead">排盘和 AI 都靠大家试用才知道哪里别扭，说一句就很有帮助。</p>' +
       '<label>想说什么<select name="type"><option value="功能建议">想加功能</option><option value="排盘有误">排盘好像不对</option><option value="AI 解读问题">AI 说得不对劲</option><option value="其他">其他</option></select></label>' +
@@ -19,10 +19,50 @@
       '<div class="support-qr" id="support-qr" hidden role="img" aria-label="付款二维码"></div><p id="support-scan" hidden>用手机微信或支付宝扫码即可；付款后本页会自动确认。</p>' +
       '<p id="support-link"></p><p role="status" id="support-status"></p><div class="service-actions"><button type="button" id="support-close">关闭</button><button type="button" id="support-pay">打开付款页</button></div></dialog>' +
       '<dialog class="service-dialog" id="support-success-dialog" aria-labelledby="support-success-title"><h2 id="support-success-title">感谢支持，心意已收到。</h2><p id="support-success-detail"></p><div class="service-actions"><button type="button" id="support-success-close">关闭</button></div></dialog>';
+    root.innerHTML += '<button type="button" id="service-peek" aria-label="展开支持与反馈入口" aria-controls="service-drawer" aria-expanded="false" hidden><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 9.5h12.5a1.5 1.5 0 0 1 1.5 1.5v1.2c0 2.9-2.1 5.3-5 5.8V20H9v-1.999a6.5 6.5 0 0 1-4.5-6.2V9.5Z" stroke="#1b1814" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 10.5h1.2A2.3 2.3 0 0 1 22 12.8v0A2.3 2.3 0 0 1 19.7 15H18.2" stroke="#1b1814" stroke-width="1.6" stroke-linecap="round"/><path d="M9 4.5c.4 1 .4 1.8 0 2.6M12 4c.5 1.1.5 2 0 3M15 4.5c.4 1 .4 1.8 0 2.6" stroke="#8a6a2f" stroke-width="1.4" stroke-linecap="round"/></svg></button>';
+    style.textContent += '#service-peek{position:fixed;right:0;bottom:144px;z-index:100;box-sizing:border-box;width:44px;height:48px;padding:9px;border:1px solid rgba(110,84,44,.26);border-radius:24px 0 0 24px;background:linear-gradient(180deg,#fffdf8,#eddfbf);box-shadow:none;cursor:pointer;transform:translateX(calc(100% - var(--service-reveal,0px)));touch-action:pan-y}#service-peek svg{display:block;width:24px;height:24px}#service-peek[hidden]{display:none}.site-service.service-mobile{transition:transform .25s ease,visibility .25s;touch-action:pan-y}.site-service.service-mobile.service-hidden{transform:translateX(calc(100% + 16px));visibility:hidden;pointer-events:none}@media(prefers-reduced-motion:reduce){.site-service.service-mobile{transition:none}}';
     document.body.appendChild(root);
     var $ = function (id) { return document.getElementById(id); };
     var pending, timer, polling = false;
     function desktop() { return !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && window.innerWidth >= 768; }
+    var drawer = $('service-drawer'), peek = $('service-peek'), expanded = false, progress = 0, touchStart;
+    function setExpanded(value) {
+      expanded = value;
+      drawer.classList.toggle('service-hidden', !desktop() && !expanded);
+      peek.hidden = desktop() || expanded || progress <= 0;
+      peek.setAttribute('aria-expanded', String(expanded));
+    }
+    function updateFloat(initial) {
+      drawer.classList.toggle('service-mobile', !desktop());
+      if (desktop()) { setExpanded(false); return; }
+      // 五页依次为奇门、八字、六爻、紫微（日历切换）、日运；隐藏输入跳过，再兜底日期输入/.form，无锚点用一屏。
+      var anchors = document.querySelectorAll('#year, #timeEditor, #castTime, #solarDate, #lunarYear, #profileBirthTime, #activeDate, input[type="date"], input[type="datetime-local"], .form');
+      var anchor = Array.from(anchors).find(function (node) { return node.getClientRects().length; });
+      var start = anchor ? anchor.getBoundingClientRect().bottom + window.scrollY : window.innerHeight;
+      progress = initial === true ? 0 : Math.max(0, Math.min(1, (window.scrollY - start) / (window.innerHeight * .5)));
+      peek.style.setProperty('--service-reveal', (44 * progress) + 'px');
+      if (!progress) expanded = false;
+      setExpanded(expanded);
+    }
+    peek.onclick = function () { if (progress > 0) { setExpanded(true); $('support-open').focus(); } };
+    drawer.addEventListener('touchstart', function (event) {
+      touchStart = event.touches.length === 1 ? event.touches[0] : null;
+    }, { passive: true });
+    drawer.addEventListener('touchend', function (event) {
+      if (!desktop() && expanded && touchStart && event.changedTouches.length) {
+        var dx = event.changedTouches[0].clientX - touchStart.clientX;
+        var dy = event.changedTouches[0].clientY - touchStart.clientY;
+        if (dx > 40 && dx > Math.abs(dy)) { setExpanded(false); peek.focus(); }
+      }
+      touchStart = null;
+    }, { passive: true });
+    drawer.addEventListener('touchcancel', function () { touchStart = null; }, { passive: true });
+    drawer.addEventListener('keydown', function (event) {
+      if (!desktop() && event.key === 'Escape') { setExpanded(false); peek.focus(); }
+    });
+    window.addEventListener('scroll', updateFloat, { passive: true });
+    window.addEventListener('resize', updateFloat);
+    updateFloat(true);
     function showPayment(order) {
       var link = document.createElement('a');
       link.href = order.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
@@ -54,6 +94,7 @@
         var result = await DeepSeekClient.request('/api/order-status?ref=' + encodeURIComponent(current.ref));
         if (pending !== current) return;
         if (result.status === 'paid') {
+          if (window.SiteAnalytics) window.SiteAnalytics.track('打赏到账');
           status('感谢支持，心意已收到。');
           $('support-success-detail').textContent = typeof result.remaining === 'number' ? 'AI 次数包剩余 ' + result.remaining + ' 次' + (result.expires_at ? '，有效至 ' + new Date(result.expires_at + 8 * 3600000).toISOString().slice(0, 10) : '') : '';
           if (desktop()) $('support-dialog').close();
@@ -108,7 +149,16 @@
         status('正在打开支持页…');
       }
       try {
-        var order = pending && pending.amount === amount ? pending : await DeepSeekClient.request('/api/order', { method: 'POST', body: { amount: amount } });
+        var order = pending && pending.amount === amount ? pending : null;
+        if (!order) {
+          try {
+            order = await DeepSeekClient.request('/api/order', { method: 'POST', body: { amount: amount } });
+          } catch (error) {
+            if (window.SiteAnalytics) window.SiteAnalytics.track('打赏建单失败');
+            throw error;
+          }
+          if (window.SiteAnalytics) window.SiteAnalytics.track('打赏建单成功');
+        }
         showPayment(order);
         savePending({ ref: order.ref, url: order.url, amount: amount, started: order.started || Date.now() }); status('等待付款，正在自动确认…');
         if (mobile) {

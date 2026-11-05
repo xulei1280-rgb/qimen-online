@@ -4,11 +4,17 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 // 最小 DOM 假对象测试事件逻辑；真实布局/原生表单校验仍需浏览器验收。
-function page({ mobile = false, width = 1440, stored, request } = {}) {
+function page({ mobile = false, width = 1440, anchorBottom = 200, stored, request } = {}) {
   const nodes = new Map(), storage = stored || new Map(), timers = new Map(), events = new Map(), popup = { location: {}, close() { this.closed = true; } };
   let time = 1000000, timerId = 0, opens = 0;
   function node(tag = 'div') {
-    return { tagName: tag, value: '', textContent: '', disabled: false, children: [], open: false,
+    const classes = new Set();
+    return { classList: { toggle(name, on) { if (on) classes.add(name); else classes.delete(name); }, contains(name) { return classes.has(name); } },
+      style: { setProperty(name, value) { this[name] = value; } },
+      setAttribute(name, value) { this[name] = value; },
+      addEventListener(name, fn) { this[name] = fn; },
+      get innerHTML() { return this.html || ''; },
+      tagName: tag, value: '', textContent: '', disabled: false, children: [], open: false,
       showModal() { this.open = true; }, close() { this.open = false; }, focus() { this.focused = true; },
       replaceChildren(...children) { this.children = children; },
       set innerHTML(html) {
@@ -24,11 +30,12 @@ function page({ mobile = false, width = 1440, stored, request } = {}) {
     };
   }
   const document = { readyState: 'complete', hidden: false, head: node(), body: node(),
+    querySelectorAll() { return anchorBottom === null ? [] : [{ getClientRects: () => [1], getBoundingClientRect: () => ({ bottom: anchorBottom - context.scrollY }) }]; },
     createElement: node, createTextNode: text => ({ textContent: text }), getElementById: id => nodes.get(id),
     addEventListener(name, fn) { events.set(name, fn); }
   };
   const analytics = [];
-  const context = { SiteAnalytics: { track(event) { analytics.push(event); } }, document, innerWidth: width, navigator: { userAgent: mobile ? 'iPhone' : 'Desktop' }, location: { pathname: '/qimen-online/bazi.html', assign(url) { this.assigned = url; } },
+  const context = { SiteAnalytics: { track(event) { analytics.push(event); } }, document, innerWidth: width, innerHeight: 800, scrollY: 0, navigator: { userAgent: mobile ? 'iPhone' : 'Desktop' }, location: { pathname: '/qimen-online/bazi.html', assign(url) { this.assigned = url; } },
     localStorage: { getItem: k => storage.get(k) || null, setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
     Date: class extends Date { static now() { return time; } },
     DeepSeekClient: { request }, setTimeout(fn, ms) { const id = ++timerId; timers.set(id, { fn, ms }); return id; }, clearTimeout(id) { timers.delete(id); },
@@ -44,7 +51,7 @@ function page({ mobile = false, width = 1440, stored, request } = {}) {
     return code;
   };
   vm.runInNewContext(readFileSync(new URL('../../site-service.js', import.meta.url), 'utf8'), context);
-  return { nodes, timers, events, storage, popup, document, qrUrls, analytics, opens: () => opens, advance: ms => time += ms };
+  return { context, nodes, timers, events, storage, popup, document, qrUrls, analytics, opens: () => opens, advance: ms => time += ms };
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
@@ -83,7 +90,7 @@ test('桌面选择金额后生成同订单二维码和后备链接，5秒轮询�
   assert.equal(p.nodes.get('support-success-detail').textContent, 'AI 次数包剩余 150 次，有效至 2026-12-05');
   p.nodes.get('support-success-close').onclick();
   assert.equal(p.nodes.get('support-success-dialog').open, false);
-  assert.deepEqual(p.analytics, ['点击打赏', '点击打赏']);
+  assert.deepEqual(p.analytics, ['点击打赏', '打赏建单成功', '点击打赏', '打赏到账']);
 });
 test('手机付款窗口/返回焦点触发；保存的关联号可在重载后继续查询', async () => {
   const stored = new Map();
@@ -105,7 +112,7 @@ test('反馈失败可再提交；支付创建失败关闭预开的手机窗口�
   assert.equal(p.nodes.get('feedback-submit').disabled, false); assert.equal(form.elements.content.value, '建议');
   await p.nodes.get('support-pay').onclick(); assert.equal(p.popup.closed, true); assert.equal(p.nodes.get('support-pay').disabled, false);
   assert.equal(p.nodes.get('service-status').textContent, '服务暂时不可用');
-  assert.deepEqual(p.analytics, [], '提交失败不记录反馈成功事件');
+  assert.deepEqual(p.analytics, ['打赏建单失败'], '只记录建单失败，不记录反馈成功或到账');
 });
 
 test('非移动UA窄屏保持原链接流程，不自动创建订单或显示二维码', async () => {
@@ -178,4 +185,66 @@ test('手机与重载后确认付款均显示成功弹窗，缺少有效期不�
     await p.events.get('focus')();
     assert.equal(p.timers.size, 0);
   }
+});
+
+test('手机初始隐藏，时间区后线性露头且封顶；点击展开、右滑收回、回顶部隐藏', () => {
+  const p = page({ mobile: true }), drawer = p.nodes.get('service-drawer'), peek = p.nodes.get('service-peek');
+  const scroll = y => { p.context.scrollY = y; p.events.get('scroll')(); };
+  assert.equal(drawer.classList.contains('service-hidden'), true);
+  assert.equal(peek.hidden, true);
+  scroll(200); assert.equal(peek.hidden, true);
+  scroll(400); assert.equal(peek.style['--service-reveal'], '22px');
+  scroll(600); assert.equal(peek.style['--service-reveal'], '44px');
+  scroll(1000); assert.equal(peek.style['--service-reveal'], '44px');
+  peek.onclick(); assert.equal(drawer.classList.contains('service-hidden'), false);
+  assert.equal(peek.hidden, true); assert.equal(p.nodes.get('support-dialog').open, false);
+  drawer.touchstart({ touches: [{ clientX: 10, clientY: 10 }] });
+  drawer.touchend({ changedTouches: [{ clientX: 20, clientY: 100 }] });
+  assert.equal(drawer.classList.contains('service-hidden'), false, '纵滑不关闭');
+  drawer.touchstart({ touches: [{ clientX: 10, clientY: 10 }] });
+  drawer.touchend({ changedTouches: [{ clientX: 80, clientY: 15 }] });
+  assert.equal(drawer.classList.contains('service-hidden'), true); assert.equal(peek.hidden, false);
+  scroll(0); assert.equal(peek.hidden, true);
+});
+test('桌面始终完整显示，窄屏/移动UA适用隐藏，无锚点从一屏后露头', () => {
+  const p = page(), drawer = p.nodes.get('service-drawer');
+  assert.equal(drawer.classList.contains('service-hidden'), false);
+  assert.equal(drawer.classList.contains('service-mobile'), false);
+  assert.equal(p.nodes.get('service-peek').hidden, true);
+  p.context.innerWidth = 390; p.events.get('resize')();
+  assert.equal(drawer.classList.contains('service-hidden'), true);
+  p.context.innerWidth = 1440; p.events.get('resize')();
+  assert.equal(drawer.classList.contains('service-hidden'), false);
+  const fallback = page({ mobile: true, anchorBottom: null });
+  fallback.context.scrollY = 800; fallback.events.get('scroll')();
+  assert.equal(fallback.nodes.get('service-peek').hidden, true);
+  fallback.context.scrollY = 1000; fallback.events.get('scroll')();
+  assert.equal(fallback.nodes.get('service-peek').style['--service-reveal'], '22px');
+});
+
+
+test('漏斗：未开放只计失败，重试成功；复用订单不重计，paid仅确认一次', async () => {
+  let unavailable = true, paid = false;
+  const p = page({ request: async path => {
+    if (path === '/api/order') {
+      if (unavailable) throw new Error('支持功能即将开放');
+      return { ref: 'a'.repeat(64), url: 'https://afdian.com/order/create?custom_order_id=test' };
+    }
+    return { status: paid ? 'paid' : 'pending' };
+  } });
+  p.nodes.get('support-open').onclick();
+  p.nodes.get('support-amount').value = '0';
+  await p.nodes.get('support-pay').onclick();
+  assert.deepEqual(p.analytics, ['点击打赏']);
+  p.nodes.get('support-amount').value = '6';
+  await p.nodes.get('support-pay').onclick();
+  assert.equal(p.nodes.get('service-status').textContent, '支持功能即将开放');
+  unavailable = false;
+  await p.nodes.get('support-pay').onclick(); await flush();
+  await p.nodes.get('support-pay').onclick(); await flush();
+  assert.deepEqual(p.analytics, ['点击打赏', '打赏建单失败', '打赏建单成功']);
+  paid = true;
+  p.events.get('focus')(); await flush();
+  p.events.get('focus')(); await flush();
+  assert.deepEqual(p.analytics, ['点击打赏', '打赏建单失败', '打赏建单成功', '打赏到账']);
 });
