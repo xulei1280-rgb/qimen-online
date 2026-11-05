@@ -13,13 +13,13 @@
       '<label>内容<textarea name="content" required maxlength="1000" placeholder="哪一步不顺手、希望加什么，随便写两句就行"></textarea></label>' +
       '<label>联系方式（选填）<span class="feedback-hint">如果采纳了你的意见，改好后我会尽量通知你。</span><input name="contact" maxlength="200" placeholder="邮箱或微信号，可不填"></label>' +
       '<p role="status" id="feedback-status"></p><div class="service-actions"><button type="button" id="feedback-close">关闭</button><button type="submit" id="feedback-submit">发给作者</button></div></form></dialog>' +
-      '<dialog class="service-dialog" id="support-dialog" aria-labelledby="support-title"><h2 id="support-title">请作者喝杯奶茶</h2>' +
+      '<dialog class="service-dialog" id="support-dialog" aria-labelledby="support-title"><h2 id="support-title" tabindex="-1" autofocus>请作者喝杯奶茶</h2>' +
       '<p>排盘可以一直免费用。AI 解读有模型费用，所以每天有少量免费次数；用完仍可看盘，只是暂时不能再问 AI。</p><p>愿意的话可自愿支持——支持后这台设备获得 AI 次数包，不设每日上限。打不打赏都不影响内容。</p>' +
-      '<p id="support-default">支持金额：6 元</p><button type="button" id="support-custom">自定义</button><label id="support-custom-field" hidden>支持金额（元）<input id="support-amount" type="number" min="6" max="999999999" step="1" value="6" inputmode="numeric" placeholder="最低 6 元" required></label><p>随缘量力，多一点支持，能有更多的 AI 次数。</p>' +
+      '<p id="support-default"><span class="support-amount-label">支持金额</span><strong id="support-amount-display">6</strong> <span class="support-amount-unit">元</span></p><button type="button" id="support-custom">自定义</button><label id="support-custom-field" hidden>支持金额（元）<input id="support-amount" type="number" min="6" max="999999999" step="1" value="6" inputmode="numeric" placeholder="最低 6 元"></label><p>随缘量力，多一点支持，能有更多的 AI 次数。</p>' +
       '<div class="support-qr" id="support-qr" hidden role="img" aria-label="付款二维码"></div><p id="support-scan" hidden>用手机微信或支付宝扫码即可；付款后本页会自动确认。</p>' +
       '<p id="support-link"></p><p role="status" id="support-status"></p><div class="service-actions"><button type="button" id="support-close">关闭</button><button type="button" id="support-pay">打开付款页</button></div></dialog>' +
       '<dialog class="service-dialog" id="support-success-dialog" aria-labelledby="support-success-title"><h2 id="support-success-title">感谢支持，心意已收到。</h2><p id="support-success-detail"></p><div class="service-actions"><button type="button" id="support-success-close">关闭</button></div></dialog>';
-    style.textContent += '#support-amount{font-size:16px}#support-amount::placeholder{color:#a2978a}.service-dialog [hidden]{display:none}.site-service.service-mobile{touch-action:pan-y;transition:transform .25s ease}.site-service.service-mobile.service-collapsed{transform:translateX(calc(100% + 16px - var(--service-reveal,0px)));transition:none;clip-path:inset(0)}.service-mobile.service-collapsed #support-open{align-self:flex-start;transform:none}.service-mobile.service-collapsed #feedback-open,.service-mobile.service-collapsed #service-status{visibility:hidden}.site-service.service-mobile.service-hidden{visibility:hidden;pointer-events:none}@media(prefers-reduced-motion:reduce){.site-service.service-mobile{transition:none}}';
+    style.textContent += '#support-title:focus{outline:none}#support-dialog #support-default{text-align:center;margin:20px 0 12px;color:#8a6a2f;line-height:1.25;overflow-wrap:anywhere}#support-default .support-amount-label{display:block;font-size:13px;color:#7a6f62;margin-bottom:8px}#support-amount-display{font:600 40px/1.25 "Noto Serif SC","Songti SC",serif}#support-default .support-amount-unit{font-size:20px}#support-dialog #support-custom{display:block;margin:0 auto 14px;min-height:44px;padding:8px 20px;border:1px solid rgba(110,84,44,.4);border-radius:10px;background:#fff7e8;color:#8a6a2f;font:inherit;font-weight:600}#support-amount{font-size:16px}#support-amount::placeholder{color:#a2978a}.service-dialog [hidden]{display:none}.site-service.service-mobile{touch-action:pan-y;transition:transform .25s ease}.site-service.service-mobile.service-collapsed{transform:translateX(calc(100% + 16px - var(--service-reveal,0px)));transition:none;clip-path:inset(0)}.service-mobile.service-collapsed #support-open{align-self:flex-start;transform:none}.service-mobile.service-collapsed #feedback-open,.service-mobile.service-collapsed #service-status{visibility:hidden}.site-service.service-mobile.service-hidden{visibility:hidden;pointer-events:none}@media(prefers-reduced-motion:reduce){.site-service.service-mobile{transition:none}}';
     document.body.appendChild(root);
     var $ = function (id) { return document.getElementById(id); };
     var pending, timer, polling = false;
@@ -121,9 +121,25 @@
       finally { $('feedback-submit').disabled = false; }
     };
     var customAmount = false;
+    function confirmAmount() {
+      var amount = customAmount ? $('support-amount').value.trim() : '6';
+      if (!/^\d{1,9}$/.test(amount) || Number(amount) < 6) {
+        status('支持金额最低 6 元，请填写正整数'); $('support-amount').focus(); return;
+      }
+      amount = String(Number(amount));
+      $('support-amount').value = amount;
+      $('support-amount-display').textContent = amount;
+      $('support-custom-field').hidden = true;
+      $('support-custom').textContent = '自定义';
+      return amount;
+    }
     $('support-custom').onclick = function () {
+      if (!$('support-custom-field').hidden) {
+        if (confirmAmount()) $('support-title').focus();
+        return;
+      }
       customAmount = true;
-      $('support-default').hidden = true;
+      $('support-custom').textContent = '确认金额';
       $('support-custom-field').hidden = false;
       $('support-amount').focus();
     };
@@ -133,6 +149,8 @@
       $('support-default').hidden = false;
       $('support-custom-field').hidden = true;
       $('support-amount').value = '6';
+      $('support-amount-display').textContent = '6';
+      $('support-custom').textContent = '自定义';
       if (window.SiteAnalytics) window.SiteAnalytics.track('点击打赏');
       $('support-dialog').showModal();
       $('support-pay').textContent = desktop() ? '生成付款二维码' : '打开付款页';
@@ -146,11 +164,8 @@
     $('support-success-close').onclick = function () { $('support-success-dialog').close(); };
     $('support-close').onclick = function () { $('support-dialog').close(); };
     $('support-pay').onclick = async function () {
-      var amount = customAmount ? $('support-amount').value.trim() : '6';
-      if (!/^\d{1,9}$/.test(amount) || Number(amount) < 6) {
-        status('支持金额最低 6 元，请填写正整数'); $('support-amount').focus(); return;
-      }
-      amount = String(Number(amount));
+      var amount = confirmAmount();
+      if (!amount) return;
       var mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       var paymentWindow = mobile ? window.open('about:blank', '_blank') : null;
       if (paymentWindow) paymentWindow.opener = null;

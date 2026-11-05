@@ -20,7 +20,7 @@ function page({ mobile = false, width = 1440, anchorBottom = 200, stored, reques
       set innerHTML(html) {
         this.html = html;
         for (const [, id] of html.matchAll(/id="([^"]+)"/g)) nodes.set(id, node());
-        if (html.includes('id="support-amount"')) nodes.get('support-amount').value = '6';
+        if (html.includes('id="support-amount"')) { nodes.get('support-amount').value = '6'; nodes.get('support-custom-field').hidden = true; }
         if (html.includes('id="feedback-form"')) {
           const form = nodes.get('feedback-form'); form.elements = { type: { value: '功能建议' }, content: { value: '', focus() {} }, contact: { value: '' } };
           form.reset = () => { form.elements.content.value = ''; form.elements.contact.value = ''; };
@@ -264,4 +264,36 @@ test('漏斗：未开放只计失败，重试成功；复用订单不重计，pa
   p.events.get('focus')(); await flush();
   p.events.get('focus')(); await flush();
   assert.deepEqual(p.analytics, ['点击打赏', '打赏建单失败', '打赏建单成功', '打赏到账']);
+});
+
+test('金额确认复用居中展示，标题承担初始焦点，隐藏输入无required', async () => {
+  for (const mobile of [false, true]) {
+    const amounts = [], p = page({ mobile, request: async (path, options) => {
+      if (path === '/api/order') amounts.push(options.body.amount);
+      return { ref: 'a'.repeat(64), url: 'https://afdian.com/order/create', status: 'pending' };
+    } });
+    if (mobile) { p.context.scrollY = 1000; p.events.get('scroll')(); p.nodes.get('support-open').onclick(); }
+    p.nodes.get('support-open').onclick();
+    const html = p.document.body.children[0].html;
+    assert.match(html, /id="support-title" tabindex="-1" autofocus/);
+    assert.equal((html.match(/autofocus/g) || []).length, 1);
+    assert.doesNotMatch(html.match(/<input id="support-amount"[^>]*>/)[0], /required|autofocus/);
+    assert.match(html, /class="support-amount-unit">元/);
+    assert.match(p.document.head.children[0].textContent, /#support-dialog #support-default\{text-align:center/);
+    p.nodes.get('support-custom').onclick();
+    p.nodes.get('support-amount').value = '5';
+    p.nodes.get('support-custom').onclick();
+    assert.equal(p.nodes.get('support-custom-field').hidden, false);
+    assert.equal(p.nodes.get('support-amount-display').textContent, '6');
+    p.nodes.get('support-amount').value = '018';
+    p.nodes.get('support-custom').onclick();
+    assert.equal(p.nodes.get('support-custom-field').hidden, true);
+    assert.equal(p.nodes.get('support-amount-display').textContent, '18');
+    assert.equal(p.nodes.get('support-default').hidden, false);
+    assert.equal(p.nodes.get('support-custom').textContent, '自定义');
+    await p.nodes.get('support-pay').onclick();
+    assert.deepEqual(amounts, ['18']);
+    p.nodes.get('support-close').onclick(); p.nodes.get('support-open').onclick();
+    assert.equal(p.nodes.get('support-amount-display').textContent, '6');
+  }
 });
