@@ -12,7 +12,6 @@ database_id = "d60c4fee-6b2a-4fc0-8015-d3d74c18e557"
 
 [vars]
 AFDIAN_USER_ID = "ce5512ded87411f1a31d52540025c377"
-AFDIAN_PLAN_ID = "11fed06ed8f311f1ba875254001e7c00"
 ALLOWED_ORIGIN = "https://qimenbazi.cn"
 # P1-0 实测后填写并启用，绝不猜测退款状态或付款时间字段。
 AFDIAN_VERIFIED = "false"

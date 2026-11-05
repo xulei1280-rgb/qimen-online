@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const qrcode = require('./vendor/qrcode-generator.js');
-const url = 'https://afdian.com/order/create?user_id=x&plan_id=y&custom_order_id=' + '0123456789abcdef'.repeat(4);
+const url = 'https://afdian.com/order/create?user_id=x&custom_price=6.00&custom_order_id=' + '0123456789abcdef'.repeat(4);
 const code = qrcode(0, 'M');
 code.addData(url);
 code.make();

@@ -2,11 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { memoryD1 } from './d1.js';
-import { createService, reserve, refund, hash, dayKey, resetAt, signQuery, validateChat } from '../src/index.js';
+import { createService, reserve, refund, hash, dayKey, resetAt, signQuery, validateChat, packCredits, amountCents, applyOrder } from '../src/index.js';
 
 const DAY = 86400000, MONTH = 30 * DAY, START = Date.UTC(2026, 10, 5, 2);
 const env = { ALLOWED_ORIGIN: 'https://xulei1280-rgb.github.io', DEEPSEEK_API_KEY: 'test-upstream-secret',
-  AFDIAN_USER_ID: 'test-creator', AFDIAN_PLAN_ID: 'test-plan', AFDIAN_TOKEN: 'test-signing-secret',
+  AFDIAN_USER_ID: 'test-creator', AFDIAN_TOKEN: 'test-signing-secret',
   WEBHOOK_PATH_SECRET: 'test-secret-path', AFDIAN_VERIFIED: 'true', AFDIAN_REFUND_STATUS: '3', AFDIAN_PAID_AT_FIELD: 'pay_time' };
 function fixture(t, fetchImpl) {
   const db = memoryD1(); t.after(() => db.raw.close());
@@ -15,7 +15,12 @@ function fixture(t, fetchImpl) {
   let sequence = 0;
   function identity(paid = false) {
     const token = (++sequence).toString(16).padStart(64, '0'), credential = hash(token);
-    db.raw.prepare('INSERT INTO credentials VALUES (?,?,?)').run(credential, START, paid ? START + MONTH : 0);
+    db.raw.prepare('INSERT INTO credentials(hash,created_at,expires_at) VALUES (?,?,?)').run(credential, START, paid ? START + MONTH : 0);
+    if (paid) {
+      const ref = (++sequence + 10000).toString(16).padStart(64, '0');
+      db.raw.prepare('INSERT INTO order_refs VALUES (?,?,?)').run(ref, credential, START);
+      db.raw.prepare("INSERT INTO orders(out_trade_no,ref,credential,amount_cents,paid_at,status,updated_at,granted) VALUES (?,?,?,?,?,'paid',?,?)").run('seed-' + sequence, ref, credential, 600, START, START, 150);
+    }
     return { token, credential };
   }
   async function request(path, { token, body, method = 'POST', origin = env.ALLOWED_ORIGIN, ip = '1.2.3.4', settings = env } = {}) {
@@ -34,7 +39,7 @@ function linked(f, identity, index = 1) {
   f.db.raw.prepare('INSERT INTO order_refs VALUES (?,?,?)').run(ref, identity.credential, START);
   return ref;
 }
-function order(ref, changes = {}) { return { out_trade_no: 'trade-1', custom_order_id: ref, total_amount: '5.01', plan_id: env.AFDIAN_PLAN_ID, status: 2, pay_time: START / 1000, ...changes }; }
+function order(ref, changes = {}) { return { out_trade_no: 'trade-1', custom_order_id: ref, total_amount: '6.00', plan_id: '', status: 2, pay_time: START / 1000, ...changes }; }
 function queryResponse(list, ec = 200, total_page = 1) { return Response.json({ ec, data: { list, total_page } }); }
 function callback(f, raw, options = {}) { return f.request('/webhook/' + env.WEBHOOK_PATH_SECRET, { body: { data: { order: raw } }, origin: null, ...options }); }
 
@@ -53,19 +58,21 @@ test('同IP第21次拒绝；其它预占回滚', async t => {
   await assert.rejects(reserve(f.db, id.credential, 'same-ip', f.now()), e => e.code === 'quota_ip');
   assert.equal(count(f.db, 'site', '*'), 20); assert.equal(count(f.db, 'credential', id.credential), 0);
 });
-test('全站第301次拒绝，打赏用户也受限', async t => {
+test('全站第301次拒绝免费用户，打赏用户不检查也不占全站额度', async t => {
   const f = fixture(t);
   for (let i = 0; i < 300; i++) { await reserve(f.db, f.identity().credential, 'ip-' + i, f.now()); f.advance(); }
-  await assert.rejects(reserve(f.db, f.identity(true).credential, 'new-ip', f.now()), e => e.code === 'quota_site' && e.message === '今日全站额度已用完');
+  await assert.rejects(reserve(f.db, f.identity().credential, 'new-ip', f.now()), e => e.code === 'quota_site' && e.message === '今日全站额度已用完');
+  await reserve(f.db, f.identity(true).credential, 'new-ip', f.now());
   assert.equal(count(f.db, 'site', '*'), 300);
 });
-test('打赏凭证20次，不检查也不占IP的日限额和短限频', async t => {
+test('打赏无每日上限，不检查也不占免费池、全站与IP日额及IP短限频', async t => {
   const f = fixture(t), id = f.identity(true);
   seed(f.db, 'ip', 'blocked-ip', 20, 20);
   f.db.raw.prepare('INSERT INTO buckets VALUES (?,?,?,?,?,?)').run('chat_ip', String(Math.floor(START / 10000)), 'blocked-ip', 10, 10, START + 10000);
-  for (let i = 0; i < 20; i++) { await reserve(f.db, id.credential, 'blocked-ip', f.now()); f.advance(); }
-  await assert.rejects(reserve(f.db, id.credential, 'blocked-ip', f.now()), e => e.code === 'quota_credential');
-  assert.equal(count(f.db, 'ip', 'blocked-ip'), 20); assert.equal(count(f.db, 'site', '*'), 20);
+  for (let i = 0; i < 21; i++) { await reserve(f.db, id.credential, 'blocked-ip', f.now()); f.advance(); }
+  assert.equal(f.db.raw.prepare('SELECT free_used FROM credentials WHERE hash=?').get(id.credential).free_used, 0);
+  assert.equal(f.db.raw.prepare('SELECT used FROM orders WHERE credential=?').get(id.credential).used, 21);
+  assert.equal(count(f.db, 'ip', 'blocked-ip'), 20); assert.equal(count(f.db, 'site', '*'), 0);
 });
 test('余额1次，并发只放行1次', async t => {
   const f = fixture(t), id = f.identity(); seed(f.db, 'credential', id.credential, 4, 1000000);
@@ -84,7 +91,7 @@ test('5xx与超时最多退还3次；重复退还幂等、打赏退款不改IP',
   for (let i = 0; i < 4; i++) {
     assert.equal((await f.request('/api/chat', { token: id.token, body: chat })).response.status, 502); f.advance();
   }
-  assert.equal(count(f.db, 'credential', id.credential), 1); assert.equal(count(f.db, 'refund', id.credential), 3);
+  assert.equal(f.db.raw.prepare('SELECT used FROM orders WHERE credential=?').get(id.credential).used, 1); assert.equal(count(f.db, 'refund', id.credential), 3);
   assert.equal(count(f.db, 'ip', hash('1.2.3.4')), 0);
   const g = fixture(t, async () => { throw new DOMException('timeout', 'TimeoutError'); }), free = g.identity();
   assert.equal((await g.request('/api/chat', { token: free.token, body: chat })).response.status, 504);
@@ -157,11 +164,11 @@ test('webhook测试请求仍受现有限频约束', async t => {
   const r = await f.request('/webhook/' + env.WEBHOOK_PATH_SECRET, { origin: null, settings });
   assert.equal(r.response.status, 429); assert.equal(r.body.error.code, 'rate_limit');
 });
-test('webhook假关联号/零元/错方案不生效，回调字段无法代替查单', async t => {
+test('webhook假关联号/零元/不足6元不生效，回调字段无法代替查单', async t => {
   let raw;
   const f = fixture(t, async () => queryResponse([raw])), id = f.identity(), ref = linked(f, id);
-  for (const change of [{ custom_order_id: 'f'.repeat(64) }, { total_amount: '0.00' }, { plan_id: 'other-plan' }]) {
-    raw = order(ref, change); const r = await callback(f, order(ref)); assert.equal(r.response.status, 200);
+  for (const change of [{ custom_order_id: 'f'.repeat(64) }, { total_amount: '0.00' }, { total_amount: '5.99' }]) {
+    raw = order(ref, { ...change, out_trade_no: 'no-grant-' + String(Object.values(change)[0]).replaceAll('.', '-') }); const r = await callback(f, raw); assert.equal(r.response.status, 200);
     assert.equal(f.db.raw.prepare('SELECT expires_at FROM credentials').get().expires_at, 0);
   }
   raw = order(ref); await callback(f, order('f'.repeat(64), { total_amount: '0.00', status: 3 }));
@@ -206,15 +213,15 @@ test('续期max(当前到期,付款时间)+30天；退款只撤对应订单且�
 test('订单链接与凭证绑定；关闭回调后轮询主动查单解锁，不能查询他人订单', async t => {
   let raw;
   const f = fixture(t, async () => queryResponse(raw ? [raw] : [])), id = f.identity();
-  const created = await f.request('/api/order', { token: id.token });
-  const url = new URL(created.body.url); assert.equal(url.origin, 'https://afdian.com'); assert.equal(url.searchParams.get('custom_order_id'), created.body.ref);
+  const created = await f.request('/api/order', { token: id.token, body: { amount: '18.00' } });
+  const url = new URL(created.body.url); assert.equal(url.origin, 'https://afdian.com'); assert.equal(url.searchParams.get('custom_price'), '18.00'); assert.equal(url.searchParams.has('plan_id'), false); assert.equal(url.searchParams.get('custom_order_id'), created.body.ref);
   raw = order(created.body.ref);
   const r = await f.request('/api/order-status?ref=' + created.body.ref, { token: id.token, method: 'GET' });
   assert.equal(r.body.status, 'paid'); assert.equal(r.body.expires_at, START + MONTH);
   assert.equal((await f.request('/api/order-status?ref=' + created.body.ref, { token: f.identity().token, method: 'GET' })).response.status, 404);
   assert.equal((await f.request('/api/order', { token: id.token, settings: { ...env, AFDIAN_VERIFIED: 'false' } })).response.status, 503);
 });
-test('每日cron补7天漏单、分页、对账60天退款并清理分桶', async t => {
+test('每日cron补7天漏单、分页、对账退款并清理分桶', async t => {
   const requests = []; let list;
   const f = fixture(t, async (url, init) => {
     const params = JSON.parse(JSON.parse(init.body).params); requests.push(params);
@@ -264,4 +271,131 @@ test('余额并发拒绝原因是凭证额度，退款回滚不影响其它计�
   const f = fixture(t), id = f.identity(); seed(f.db, 'credential', id.credential, 4, 1000000);
   const results = await Promise.allSettled([reserve(f.db, id.credential, 'ip', START), reserve(f.db, id.credential, 'ip', START)]);
   assert.equal(results.filter(r => r.status === 'rejected' && r.reason.code === 'quota_credential').length, 1);
+});
+
+test('金额按分解析并折算：小数向下取整、6/18/68档底及线性金额越档', () => {
+  for (const [yuan, credits] of [['0', 0], ['5.99', 0], ['6', 150], ['6.03', 150], ['6.04', 151],
+    ['17.99', 449], ['18', 600], ['24', 600], ['24.04', 601], ['67.99', 1699], ['68', 2500], ['100', 2500], ['100.04', 2501], ['999999999.99', 24999999999]]) {
+    assert.equal(packCredits(amountCents(yuan)), credits, yuan);
+  }
+  for (const invalid of [null, undefined, {}, [], true, -6, '6.001', '1e2', 'NaN', 'Infinity', '', ' 6', '1000000000']) assert.equal(amountCents(invalid), null);
+});
+test('下单金额校验；不依赖plan_id，实付决定次数、零元不赠送、不足6元确认但不发包', async t => {
+  let raw;
+  const f = fixture(t, async () => queryResponse(raw ? [raw] : [])), id = f.identity();
+  for (const body of [null, {}, { amount: 0 }, { amount: '-6' }, { amount: '6.001' }, { amount: '1e2' }, { amount: [] }, { amount: 6, plan_id: 'x' }]) {
+    const r = await f.request('/api/order', { token: id.token, body });
+    assert.equal(r.response.status, 400); f.advance(61000);
+  }
+  assert.equal(f.db.raw.prepare('SELECT COUNT(*) n FROM order_refs').get().n, 0);
+  const created = await f.request('/api/order', { token: id.token, body: { amount: 68 } });
+  const url = new URL(created.body.url);
+  assert.equal(url.searchParams.get('custom_price'), '68.00'); assert.equal(url.searchParams.has('plan_id'), false);
+  raw = order(created.body.ref, { total_amount: '18.00', show_amount: '68.00', plan_id: 'any-plan' });
+  let r = await f.request('/api/order-status?ref=' + created.body.ref, { token: id.token, method: 'GET' });
+  assert.equal(r.body.remaining, 600); assert.equal(r.body.granted, 600);
+  const small = linked(f, id, 2);
+  raw = order(small, { out_trade_no: 'small', total_amount: '5.99' });
+  await callback(f, raw);
+  r = await f.request('/api/order-status?ref=' + small, { token: id.token, method: 'GET' });
+  assert.equal(r.body.status, 'paid'); assert.equal(r.body.granted, 0); assert.equal(r.body.remaining, 600);
+  assert.equal(r.body.expires_at, START + MONTH);
+});
+test('免费池终身100次、每天5次；午夜和cron清理不重置；耗尽不带次日重试承诺', async t => {
+  const f = fixture(t), id = f.identity();
+  for (let day = 0; day < 20; day++) {
+    for (let i = 0; i < 5; i++) { await reserve(f.db, id.credential, 'ip', f.now()); f.advance(); }
+    if (day !== 19) await assert.rejects(reserve(f.db, id.credential, 'ip', f.now()), e => e.code === 'quota_credential');
+    f.advance(DAY);
+  }
+  await f.service.reconcile({ ...env, AFDIAN_VERIFIED: 'false' });
+  assert.equal(f.db.raw.prepare('SELECT free_used FROM credentials WHERE hash=?').get(id.credential).free_used, 100);
+  const r = await f.request('/api/chat', { token: id.token, body: chat });
+  assert.equal(r.body.error.code, 'quota_lifetime'); assert.equal(r.body.error.retry_at, undefined);
+  assert.match(r.body.error.message, /100 次免费 AI 已用完/);
+  assert.equal(count(f.db, 'site', '*', f.now()), 0);
+  const fresh = f.identity(); await reserve(f.db, fresh.credential, 'ip', f.now());
+  const ref = linked(f, id);
+  await applyOrder(f.db, order(ref, { pay_time: f.now() / 1000 }), env, f.now());
+  assert.equal((await reserve(f.db, id.credential, 'ip', f.now())).paid, 1, '免费池用尽仍可用次数包');
+});
+test('免费失败退回终身池且幂等；短限频失败不扣免费池或次数包', async t => {
+  const f = fixture(t), id = f.identity();
+  const a = await reserve(f.db, id.credential, 'ip', f.now());
+  await assert.rejects(reserve(f.db, id.credential, 'ip', f.now()), e => e.code === 'rate_limit');
+  assert.equal(f.db.raw.prepare('SELECT free_used FROM credentials WHERE hash=?').get(id.credential).free_used, 1);
+  await refund(f.db, a.id, f.now()); await refund(f.db, a.id, f.now());
+  assert.equal(f.db.raw.prepare('SELECT free_used FROM credentials WHERE hash=?').get(id.credential).free_used, 0);
+  const paid = f.identity(true);
+  await reserve(f.db, paid.credential, 'ip', f.now());
+  await assert.rejects(reserve(f.db, paid.credential, 'ip', f.now()), e => e.code === 'rate_limit');
+  assert.equal(f.db.raw.prepare('SELECT used FROM orders WHERE credential=?').get(paid.credential).used, 1);
+});
+test('二次打赏累加剩余次数并顺延，按旧订单先扣；退款撤该笔剩余和30天，不扣其它包', async t => {
+  const f = fixture(t), id = f.identity(), ref = linked(f, id);
+  await applyOrder(f.db, order(ref), env, f.now());
+  for (let i = 0; i < 3; i++) { await reserve(f.db, id.credential, 'ip', f.now()); f.advance(); }
+  f.advance(10 * DAY);
+  const second = order(ref, { out_trade_no: 'trade-2', total_amount: '18.00', pay_time: Math.floor(f.now() / 1000) });
+  await applyOrder(f.db, second, env, f.now());
+  assert.equal(f.db.raw.prepare('SELECT SUM(granted-used) n FROM orders').get().n, 747);
+  assert.equal(f.db.raw.prepare('SELECT expires_at FROM credentials').get().expires_at, START + 2 * MONTH);
+  await applyOrder(f.db, order(ref, { status: 3, total_amount: '0.00' }), env, f.now());
+  const rows = f.db.raw.prepare('SELECT * FROM orders ORDER BY out_trade_no').all();
+  assert.equal(rows[0].status, 'refunded'); assert.equal(rows[0].used, 3);
+  assert.equal(rows[1].granted - rows[1].used, 600);
+  assert.equal(rows[1].expires_at, second.pay_time * 1000 + MONTH);
+  await applyOrder(f.db, order(ref), env, f.now());
+  assert.equal(f.db.raw.prepare("SELECT COUNT(*) n FROM orders WHERE status='paid'").get().n, 1);
+});
+test('用完次数包当次自动回免费池；免费日额已用完则拒绝，次日恢复且不复活包', async t => {
+  const f = fixture(t), id = f.identity(true);
+  f.db.raw.prepare('UPDATE orders SET used=149 WHERE credential=?').run(id.credential);
+  const paid = await reserve(f.db, id.credential, 'ip', f.now()); assert.equal(paid.paid, 1); f.advance();
+  for (let i = 0; i < 5; i++) { assert.equal((await reserve(f.db, id.credential, 'ip', f.now())).paid, 0); f.advance(); }
+  await assert.rejects(reserve(f.db, id.credential, 'ip', f.now()), e => e.code === 'quota_credential');
+  f.advance(DAY); assert.equal((await reserve(f.db, id.credential, 'ip', f.now())).paid, 0);
+  assert.equal(f.db.raw.prepare('SELECT used FROM orders').get().used, 150);
+});
+test('次数包最后1次并发只扣一次，其它请求回免费时仍受原子限频', async t => {
+  const f = fixture(t), id = f.identity(true);
+  f.db.raw.prepare('UPDATE orders SET used=149').run();
+  const results = await Promise.allSettled(Array.from({ length: 8 }, () => reserve(f.db, id.credential, 'ip', f.now())));
+  assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
+  assert.equal(f.db.raw.prepare('SELECT used FROM orders').get().used, 150);
+  assert.equal(f.db.raw.prepare('SELECT free_used FROM credentials').get().free_used, 0);
+});
+test('到期边界立即回免费；过期再打赏不复活旧余额；较晚通知按真实付款时间算有效期', async t => {
+  const f = fixture(t), id = f.identity(), ref = linked(f, id);
+  await applyOrder(f.db, order(ref), env, f.now());
+  f.advance(MONTH);
+  assert.equal((await reserve(f.db, id.credential, 'ip', f.now())).paid, 0); f.advance();
+  await applyOrder(f.db, order(ref, { out_trade_no: 'new', total_amount: '18.00', pay_time: f.now() / 1000 }), env, f.now());
+  const r = await f.request('/api/order-status?ref=' + ref, { token: id.token, method: 'GET' });
+  assert.equal(r.body.remaining, 600); assert.equal(r.body.expires_at, f.now() + MONTH);
+  f.advance(2 * MONTH);
+  const late = f.identity(), lateRef = linked(f, late, 3);
+  await applyOrder(f.db, order(lateRef, { out_trade_no: 'late' }), env, f.now());
+  assert.equal((await reserve(f.db, late.credential, 'ip2', f.now())).paid, 0);
+});
+test('乱序回调重算付款链；退款后上游退次不会复活权益；超过60天老订单仍对账退款', async t => {
+  let queried = [];
+  const f = fixture(t, async (url, init) => {
+    const params = JSON.parse(JSON.parse(init.body).params);
+    if (params.out_trade_no) { queried.push(...params.out_trade_no.split(',')); return queryResponse(params.out_trade_no.split(',').map(id => order(ref, { out_trade_no: id, status: 3 }))); }
+    return queryResponse([]);
+  }), id = f.identity(), ref = linked(f, id);
+  f.advance(40 * DAY);
+  await applyOrder(f.db, order(ref, { out_trade_no: 'trade-2', pay_time: (START + 20 * DAY) / 1000 }), env, f.now());
+  await applyOrder(f.db, order(ref), env, f.now());
+  assert.equal(f.db.raw.prepare('SELECT expires_at FROM credentials').get().expires_at, START + 2 * MONTH);
+  const attempt = await reserve(f.db, id.credential, 'ip', f.now());
+  await applyOrder(f.db, order(ref, { status: 3 }), env, f.now());
+  await refund(f.db, attempt.id, f.now());
+  assert.equal(f.db.raw.prepare("SELECT status FROM orders WHERE out_trade_no='trade-1'").get().status, 'refunded');
+  // 另一条老订单仍待对账，确认60天之外也不会遗漏退款。
+  f.advance(30 * DAY); await f.service.reconcile(env);
+  assert.ok(queried.includes('trade-2'));
+  assert.equal(f.db.raw.prepare('SELECT expires_at FROM credentials').get().expires_at, 0);
+  assert.equal(f.db.raw.prepare("SELECT status FROM orders WHERE out_trade_no='trade-2'").get().status, 'refunded');
 });

@@ -18,6 +18,8 @@ function databaseError(error, now) {
   for (const [key, text] of [['site', '今日全站额度已用完'], ['credential', '今日凭证额度已用完'], ['ip', '今日 IP 免费额度已用完']]) {
     if (message.includes('quota_' + key)) return new ApiError(429, 'quota_' + key, text, resetAt(now));
   }
+  if (message.includes('quota_lifetime')) return new ApiError(429, 'quota_lifetime', '本设备凭证的 100 次免费 AI 已用完，排盘仍可免费使用。若愿意，可以点「请作者喝杯奶茶」自愿支持；不支持也完全没问题。');
+  if (message.includes('quota_pack')) return new ApiError(429, 'quota_pack', 'AI 次数包已用完，请稍后重试以使用免费次数');
   if (message.includes('rate_')) return new ApiError(429, 'rate_limit', '操作太频繁，请稍后再试', Math.ceil((now + 1) / 60000) * 60000);
   return new ApiError(503, 'database_unavailable', '服务暂时不可用，请稍后再试');
 }
@@ -39,9 +41,12 @@ async function rate(db, scope, ip, now, limit = 30) {
 export async function reserve(db, credential, ip, now) {
   const id = random();
   const result = await batch(db, [
-    stmt(db, `INSERT INTO attempts(id,credential,day,ip,paid,created_at,reset_at)
-      SELECT ?,hash,?,?,CASE WHEN expires_at>? THEN 1 ELSE 0 END,?,? FROM credentials WHERE hash=?`,
-    id, dayKey(now), ip, now, now, resetAt(now), credential),
+    stmt(db, `INSERT INTO attempts(id,credential,day,ip,paid,order_id,created_at,reset_at)
+      SELECT ?,hash,?,?,CASE WHEN o.out_trade_no IS NOT NULL THEN 1 ELSE 0 END,o.out_trade_no,?,?
+      FROM credentials LEFT JOIN orders o ON o.out_trade_no=(SELECT out_trade_no FROM orders
+        WHERE credential=credentials.hash AND status='paid' AND used<granted AND expires_at>?
+        ORDER BY paid_at,out_trade_no LIMIT 1) WHERE hash=?`,
+    id, dayKey(now), ip, now, resetAt(now), now, credential),
     stmt(db, 'SELECT * FROM attempts WHERE id=?', id)
   ], now);
   if (!result[1].results[0]) fail(401, 'invalid_credential', '访问凭证无效，请刷新页面');
@@ -90,7 +95,7 @@ export function validateChat(body) {
     messages: [{ role: 'system', content: messages.filter(m => m.role === 'system').map(m => m.content).join('\n') + '\n' + POLICY }, ...messages.filter(m => m.role !== 'system')] };
 }
 function paymentConfig(env) {
-  if (env.AFDIAN_VERIFIED !== 'true' || !env.AFDIAN_PLAN_ID || !env.AFDIAN_TOKEN || !env.AFDIAN_PAID_AT_FIELD || !env.AFDIAN_REFUND_STATUS || env.AFDIAN_REFUND_STATUS === '2') fail(503, 'payment_unavailable', '支持功能即将开放');
+  if (env.AFDIAN_VERIFIED !== 'true' || !env.AFDIAN_USER_ID || !env.AFDIAN_TOKEN || !env.AFDIAN_PAID_AT_FIELD || !env.AFDIAN_REFUND_STATUS || env.AFDIAN_REFUND_STATUS === '2') fail(503, 'payment_unavailable', '支持功能即将开放');
 }
 export function signQuery(env, params, ts) {
   return createHash('md5').update(env.AFDIAN_TOKEN + 'params' + params + 'ts' + ts + 'user_id' + env.AFDIAN_USER_ID).digest('hex');
@@ -109,16 +114,23 @@ export async function queryOrders(env, paramsObject, fetchImpl, now) {
   if (!response.ok || body.ec !== 200 || !Array.isArray(body.data?.list) || !Number.isInteger(body.data.total_page) || body.data.total_page < 0) fail(502, 'order_query_failed', '付款核验暂时失败，请稍后再试');
   return body.data;
 }
+export function amountCents(value) {
+  if (!['string', 'number'].includes(typeof value) || !/^\d{1,9}(\.\d{1,2})?$/.test(String(value))) return null;
+  const [yuan, fraction = ''] = String(value).split('.');
+  return Number(yuan) * 100 + Number(fraction.padEnd(2, '0'));
+}
+export function packCredits(cents) {
+  if (cents < 600) return 0;
+  return Math.max(Math.floor(cents / 4), cents >= 6800 ? 2500 : cents >= 1800 ? 600 : 150);
+}
 export function normalizeOrder(raw, env, now) {
   const id = raw?.out_trade_no, ref = raw?.custom_order_id;
   if (typeof id !== 'string' || !/^[\w-]{1,100}$/.test(id)) fail(502, 'order_shape', '订单字段待核实');
   // 查单缺少可信关联号或退款字段时关闭发放，绝不使用回调内的对应值。
   if (typeof ref !== 'string') fail(502, 'order_shape', '查单未返回关联号，打赏解锁需要实测核实');
-  const centsText = String(raw.total_amount ?? '');
-  if (!/^\d{1,9}(\.\d{1,2})?$/.test(centsText)) fail(502, 'order_shape', '订单金额无效');
-  const [yuan, fraction = ''] = centsText.split('.');
-  const cents = Number(yuan) * 100 + Number(fraction.padEnd(2, '0'));
-  if (raw.plan_id !== env.AFDIAN_PLAN_ID || !/^[a-f0-9]{64}$/.test(ref)) return null;
+  const cents = amountCents(raw.total_amount);
+  if (cents === null) fail(502, 'order_shape', '订单金额无效');
+  if (!/^[a-f0-9]{64}$/.test(ref)) return null;
   const status = String(raw.status);
   if (!['2', env.AFDIAN_REFUND_STATUS].includes(status)) fail(502, 'order_status_unknown', '订单状态待核实，尚未变更权益');
   if (status === '2' && !cents) return null;
@@ -131,11 +143,11 @@ export async function applyOrder(db, raw, env, now) {
   const order = normalizeOrder(raw, env, now);
   if (!order) return;
   // 订单与触发器中的权益变更同一事务；退款不可被迟到的成功通知复活。
-  await batch(db, [stmt(db, `INSERT INTO orders(out_trade_no,ref,credential,amount_cents,paid_at,status,updated_at)
-    SELECT ?,ref,credential,?,?,?,? FROM order_refs WHERE ref=?
+  await batch(db, [stmt(db, `INSERT INTO orders(out_trade_no,ref,credential,amount_cents,paid_at,status,updated_at,granted)
+    SELECT ?,ref,credential,?,?,?,?,? FROM order_refs WHERE ref=?
     ON CONFLICT(out_trade_no) DO UPDATE SET status='refunded',updated_at=excluded.updated_at
     WHERE orders.ref=excluded.ref AND orders.credential=excluded.credential AND orders.status='paid' AND excluded.status='refunded'`,
-  order.id, order.cents, order.paidAt, order.status, now, order.ref)], now);
+  order.id, order.cents, order.paidAt, order.status, now, packCredits(order.cents), order.ref)], now);
 }
 async function scanRecent(env, db, fetchImpl, now, pause) {
   const cutoff = now - 7 * DAY;
@@ -144,8 +156,8 @@ async function scanRecent(env, db, fetchImpl, now, pause) {
     // 按付款时间排序，确保同一批续期从旧到新发放。
     const list = data.list.slice().sort((a, b) => Number(a[env.AFDIAN_PAID_AT_FIELD]) - Number(b[env.AFDIAN_PAID_AT_FIELD]));
     for (const raw of list) {
-      // 非本站方案无需读取关联号；本站方案缺少关联号则必须阻止上线。
-      if (raw.plan_id === env.AFDIAN_PLAN_ID) await applyOrder(db, raw, env, now);
+      // 全量查单中仅处理本站关联号；权益始终按查单实付金额发放。
+      if (typeof raw.custom_order_id === 'string' && /^[a-f0-9]{64}$/.test(raw.custom_order_id)) await applyOrder(db, raw, env, now);
     }
     const oldest = Math.min(...data.list.map(o => Number(o[env.AFDIAN_PAID_AT_FIELD]) * 1000));
     if (page >= data.total_page || !data.list.length || (Number.isFinite(oldest) && oldest < cutoff)) break;
@@ -232,10 +244,14 @@ export function createService({ db, fetchImpl = fetch, now = Date.now, pause = m
         paymentConfig(env);
         const credential = await auth(request);
         await rate(db, 'order_create', ip, time, 5);
+        const body = await jsonBody(request);
+        if (!body || typeof body !== 'object' || Object.keys(body).some(k => k !== 'amount')) fail(400, 'invalid_amount', '请填写支持金额（元）');
+        const cents = amountCents(body.amount);
+        if (cents === null || cents <= 0) fail(400, 'invalid_amount', '支持金额须大于 0，最多两位小数');
         const ref = random();
         await batch(db, [stmt(db, 'INSERT INTO order_refs VALUES (?,?,?)', ref, credential.hash, time)], time);
         const link = new URL('https://afdian.com/order/create');
-        link.search = new URLSearchParams({ user_id: env.AFDIAN_USER_ID, plan_id: env.AFDIAN_PLAN_ID, custom_order_id: ref }).toString();
+        link.search = new URLSearchParams({ user_id: env.AFDIAN_USER_ID, custom_price: (cents / 100).toFixed(2), custom_order_id: ref }).toString();
         result = { ref, url: link.href };
       } else if (url.pathname === '/api/order-status' && request.method === 'GET') {
         paymentConfig(env);
@@ -244,13 +260,14 @@ export function createService({ db, fetchImpl = fetch, now = Date.now, pause = m
         if (!/^[a-f0-9]{64}$/.test(ref || '')) fail(400, 'invalid_order', '订单关联号无效');
         const owner = await stmt(db, 'SELECT * FROM order_refs WHERE ref=? AND credential=?', ref, credential.hash).first();
         if (!owner) fail(404, 'order_not_found', '未找到该凭证的订单');
-        let orders = await stmt(db, 'SELECT status FROM orders WHERE ref=?', ref).all();
+        let orders = await stmt(db, 'SELECT status,granted FROM orders WHERE ref=?', ref).all();
         if (!orders.results.length) {
           await scanRecent(env, db, fetchImpl, time, pause);
-          orders = await stmt(db, 'SELECT status FROM orders WHERE ref=?', ref).all();
+          orders = await stmt(db, 'SELECT status,granted FROM orders WHERE ref=?', ref).all();
         }
-        const current = await stmt(db, 'SELECT expires_at FROM credentials WHERE hash=?', credential.hash).first();
-        result = { status: orders.results.some(o => o.status === 'paid') ? 'paid' : orders.results.length ? 'refunded' : 'pending', expires_at: current.expires_at };
+        const current = await stmt(db, `SELECT expires_at,(SELECT COALESCE(SUM(granted-used),0) FROM orders
+          WHERE credential=credentials.hash AND status='paid' AND expires_at>?) remaining FROM credentials WHERE hash=?`, time, credential.hash).first();
+        result = { status: orders.results.some(o => o.status === 'paid') ? 'paid' : orders.results.length ? 'refunded' : 'pending', expires_at: current.expires_at, remaining: current.remaining, granted: orders.results.filter(o => o.status === 'paid').reduce((n, o) => n + o.granted, 0) };
       } else fail(404, 'not_found', '接口不存在');
       return new Response(JSON.stringify(result), { headers });
     } catch (error) {
@@ -265,7 +282,7 @@ export function createService({ db, fetchImpl = fetch, now = Date.now, pause = m
     try {
       if (env.AFDIAN_VERIFIED === 'true') {
         await scanRecent(env, db, fetchImpl, time, pause);
-        const rows = await stmt(db, "SELECT out_trade_no FROM orders WHERE status='paid' AND paid_at>=?", time - 60 * DAY).all();
+        const rows = await stmt(db, "SELECT out_trade_no FROM orders WHERE status='paid'").all();
         for (let i = 0; i < rows.results.length; i += 50) {
           await pause(1100);
           const ids = rows.results.slice(i, i + 50).map(o => o.out_trade_no);

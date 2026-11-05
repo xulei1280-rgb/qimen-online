@@ -25,6 +25,14 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P1 Tip Pack v1 — 2026-11-05
+
+- 工作分支 `ui/support-float-polish`，最新 `origin/main` 为 `d65d548`；保留分支两笔墨金/动效提交，按需求完成免费凭证终身 100 次且每天 5 次、自选金额次数包、30 天累加/顺延与逐订单退款回收；IP/全站额度只用于免费请求。默认 6 元可改，`custom_price` 下单，签名查单实付决定权益，不依赖固定方案。
+- 验证：`node --test worker/test/*.test.js` 42/42；客户端、二维码、八字、奇门、日运、P0、P2 共七项检查与 JS 语法、diff 检查通过。独立 Chrome 上五页 × 1366/390px 的金额弹窗、模拟下单、二维码/链接、重开/Escape 均通过，无页面脚本错误；请求全部拦截模拟，未真实付款或调用 AI。
+- 额外回归：`check-ziwei-ai-ui.cjs` 在“settings must not recalculate or alter saved records”失败；对修改前 `a650595` 独立快照复测同样失败，属既有问题，本轮未改紫微记录逻辑。
+- 交付：按用户要求仅本地 commit，不 push、不部署；`AFDIAN_VERIFIED="false"` 保持原样。报告与截图：`/workspace/qimen-tip-pack-task/`。
+- 后续发布前先备份现有 D1，再执行 `worker/migrations/0002-tip-pack.sql`（仅一次）；首次空库用新 schema。迁移只能回填旧库仍保留的免费请求，旧 cron 已清理的历史无法恢复；新计数不随清理重置。真实付款时间/退款协议和生产迁移仍待后续验收，勿提前启用 verified。
+
 ### P1 Worker / Afdian Webhook Test Acknowledgement — 2026-11-05
 
 - `main`：webhook 先限频再解析；空 body、缺失或非法订单号直接返回 `{"ec":200}`，跳过付款配置、查单与订单/权益写入；合法订单号沿用付款配置检查、查单与处理流程。

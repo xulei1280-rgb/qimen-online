@@ -36,11 +36,12 @@ async function run() {
     await assert.rejects(client.requestFinal({ fetchImpl: async () => { attempts++; return response({ error: { code, message: '今日全站额度已用完', retry_at: 123 } }, false); } }), e => e.code === code && e.retryAt === 123 && e.message === '今天的免费 AI 次数用完了，排盘还能继续用。AI 解读有一点成本；若喜欢本站，可以点「请作者喝杯奶茶」。不支持也完全没问题。');
     assert.equal(attempts, 1);
   }
+  await assert.rejects(client.requestFinal({ fetchImpl: async () => response({ error: { code: 'quota_lifetime', message: '本设备凭证的 100 次免费 AI 已用完' } }, false) }), e => e.code === 'quota_lifetime' && e.message === '本设备凭证的 100 次免费 AI 已用完' && !e.retryAt);
   await assert.rejects(client.requestFinal({ fetchImpl: async () => response({ choices: [{ finish_reason: 'content_filter', message: { content: '' } }] }) }), /内容过滤/);
   assert.equal(load().QIMEN_API_BASE, 'https://api.qimenbazi.cn');
   for (const page of ['index.html', 'bazi.html', 'liuyao.html', 'ziwei.html', 'daily.html']) {
     const html = fs.readFileSync(page, 'utf8');
-    assert.ok(html.includes('site-service.js?v=20261105.7'), page + ' shared feedback/support');
+    assert.ok(html.includes('site-service.js?v=20261105.8'), page + ' shared feedback/support');
     assert.doesNotMatch(html, /API_KEY_STORAGE|apiKey|API Key|api\.deepseek\.com/);
   }
   for (const path of ['deepseek-client.js', 'site-service.js', 'ziwei-page.js', 'README.md']) assert.doesNotMatch(fs.readFileSync(path, 'utf8'), /API_KEY_STORAGE|apiKey|API Key|api\.deepseek\.com/);
