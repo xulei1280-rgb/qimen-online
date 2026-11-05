@@ -38,7 +38,7 @@ async function run() {
   assert.equal(load().QIMEN_API_BASE, 'https://api.qimenbazi.cn');
   for (const page of ['index.html', 'bazi.html', 'liuyao.html', 'ziwei.html', 'daily.html']) {
     const html = fs.readFileSync(page, 'utf8');
-    assert.ok(html.includes('site-service.js?v=20261105.4'), page + ' shared feedback/support');
+    assert.ok(html.includes('site-service.js?v=20261105.5'), page + ' shared feedback/support');
     assert.doesNotMatch(html, /API_KEY_STORAGE|apiKey|API Key|api\.deepseek\.com/);
   }
   for (const path of ['deepseek-client.js', 'site-service.js', 'ziwei-page.js', 'README.md']) assert.doesNotMatch(fs.readFileSync(path, 'utf8'), /API_KEY_STORAGE|apiKey|API Key|api\.deepseek\.com/);
