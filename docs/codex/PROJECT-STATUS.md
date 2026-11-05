@@ -30,7 +30,9 @@ Use a dedicated module worktree when work must happen in parallel.
 - 本轮在 `p1-backend` 完成部署，按用户授权合并至 `main` 并推送两分支；前端根目录新增 `CNAME=qimenbazi.cn`，Worker 允许源改为 `https://qimenbazi.cn`，保留 `workers_dev=false`。
 - Worker `qimen-api` 已部署，版本 `48fe594b-7201-4124-a292-5276ac9e017c`，自定义域名 `api.qimenbazi.cn`；部署确认 cron `0 19 * * *` 已注册。
 - 验证：全部 15 个 `check-*.js` / `check-*.cjs` 已执行，10 个通过、5 个因缺少 Playwright 跳过（含共用环境脚本）；`cd worker && node --test test/*.test.js` 27/27 通过；`git diff --check` 通过。
-- 发布后继续核对 GitHub Pages 自定义域名、证书及强制 HTTPS、HTTP/HTTPS/www 跳转，以及生产凭证和单次“你好”chat 的 CORS；最终结果见本轮部署报告。爱发电实测开关保持关闭。
+- 发布验证：`p1-backend` 部署提交 `36c351f`，合并提交 `4c8a424`，两分支已推送。GitHub Pages 已绑定 `qimenbazi.cn` 且构建成功；GitHub DNS health 确认主域名和 www 均有效。生产凭证、单次“你好”chat 均 HTTP 200，CORS 为 `https://qimenbazi.cn`，预检 204；未输出凭证或 secret。
+- HTTPS 待续：轮询约 15 分钟后 Pages 证书仍为 `new`，`https_enforced=false`；正常 HTTPS curl 报证书域名不匹配。当前环境 HTTP curl 返回 Pingora 500；仅用于诊断的跳过证书校验请求确认首页 200、www 301 至 `https://qimenbazi.cn/`，不代表正常 HTTPS 可用。
+- 下一步：证书就绪后执行 `gh api -X PUT repos/xulei1280-rgb/qimen-online/pages -F https_enforced=true`，再验证 HTTP/HTTPS 与 www 跳转。爱发电实测开关保持关闭。
 
 ### P2 Analytics / Canonical / Sitemap — 2026-11-05
 
