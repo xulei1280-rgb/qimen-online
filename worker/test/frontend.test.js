@@ -127,8 +127,8 @@ test('默认6元可改；金额只传下单，不展示价目表；保留墨金�
   assert.equal(JSON.parse(p.storage.get('qimen_pending_order')).amount, '18.50');
   assert.equal(p.qrUrls[0], 'https://afdian.com/order/create?custom_price=18.50');
   const html = p.document.body.children[0].html, css = p.document.head.children[0].textContent;
-  for (const text of ['请作者喝杯奶茶', '随缘量力，多一点支持，能有更多的 AI 次数。', '不设每日上限', '本设备凭证共 100 次免费 AI，每天最多 5 次', '实付不足 6 元不发次数包']) assert.ok(html.includes(text));
-  assert.doesNotMatch(html, /600次|2500次|plan_id/);
+  for (const text of ['请作者喝杯奶茶', '随缘量力，多一点支持，能有更多的 AI 次数。', '不设每日上限']) assert.ok(html.includes(text));
+  assert.doesNotMatch(html, /600次|2500次|plan_id|本设备凭证共|次数包每笔有效|不发次数包/);
   for (const text of ['#support-open:hover', 'translateY(-1px)', 'prefers-reduced-motion:reduce', 'border-radius:999px', 'linear-gradient(180deg,#f1dcab,#d2b277)', 'text-decoration:underline', 'text-align:right']) assert.ok(css.includes(text));
   assert.ok(html.includes('class="support-open-icon" aria-hidden="true"><svg'));
   assert.match(css, /\.site-service\{[^}]*padding:0;border:none;background:transparent;box-shadow:none/);
@@ -149,7 +149,7 @@ test('非法金额不建单或打开付款窗口；不足6元仍可自愿支持'
 
 test('不足6元实付和退款会结束轮询，给出对应软提示', async () => {
   for (const [result, expected] of [
-    [{ status: 'paid', granted: 0, remaining: 0, expires_at: 0 }, '感谢支持。本次实付不足 6 元，未发放 AI 次数包。'],
+    [{ status: 'paid', granted: 0, remaining: 0, expires_at: 0 }, '感谢支持。少于 6 元算纯打赏，不增加 AI 次数。'],
     [{ status: 'refunded' }, '该订单已退款，对应权益已撤回。']
   ]) {
     const p = page({ request: async path => path === '/api/order' ? { ref: 'a'.repeat(64), url: 'https://afdian.com/order/create' } : result });
