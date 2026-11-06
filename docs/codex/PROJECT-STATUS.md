@@ -25,6 +25,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### P1 Ziwei Input Overflow — 2026-11-06
+
+- 仅修改紫微输入布局：日期/时间明确 `border-box` 与 100% 宽度，表单子项及嵌套字段允许收缩，420px 以下网格采用 `minmax(0,1fr)`；CSS 缓存更新为 `20261106.2`。排盘与功能未改。
+- 验证：Chromium 390px 两框上下排列、1200px 并排且均在卡片内；另测 320/420/760/820/1000px，以及原生控件 `content-box` 模拟（旧版可复现、新版通过）。紫微检查 3714 项断言、`git diff --check` 通过。
+- 交付：提交并推送 `main`；报告及截图 `/workspace/ziwei-overflow-fix/`。未验收实体 iOS/WebKit（环境缺依赖）；1200px 页头装饰原有 16px 页面溢出已对照基线确认，本轮只修出生输入框。下一步实体手机验收日期/时间控件。
+
 ### P1 Tip Amount Blur — 2026-11-05
 
 - 基于最新 `origin/main@06869d0`：自定义按钮始终保留原文案；输入 blur/change 复用金额校验，自动更新居中金额与既有“元”展示。非法金额软提示、保留有效展示且不抢焦点；打开默认 6 元、不聚焦输入，其他软句与漏斗不变。五页共享缓存 `.16`。
