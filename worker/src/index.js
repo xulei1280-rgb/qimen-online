@@ -179,12 +179,26 @@ export function createService({ db, fetchImpl = fetch, now = Date.now, pause = m
     if (origin === env.ALLOWED_ORIGIN) Object.assign(headers, {
       'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-umami-cache',
       'Access-Control-Expose-Headers': 'Retry-After'
     });
+    // 统计转发：国内直连 cloud.umami.is 常失败，脚本和事件经本域名转给 Umami。
+    if (url.pathname === '/u/script.js' && request.method === 'GET') {
+      const r = await fetchImpl('https://cloud.umami.is/script.js');
+      return new Response(r.body, { status: r.status, headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
+    }
     try {
       if (!webhook && (!origin || origin === 'null' || origin !== env.ALLOWED_ORIGIN)) fail(403, 'origin_denied', '请求来源不允许');
       if (request.method === 'OPTIONS' && !webhook) return new Response(null, { status: 204, headers });
+      if (url.pathname === '/u/api/send' && request.method === 'POST') {
+        const body = await request.text();
+        if (body.length > 8192) fail(413, 'too_large', '统计数据过大');
+        const fwd = { 'Content-Type': 'application/json', 'User-Agent': request.headers.get('User-Agent') || '' };
+        const cache = request.headers.get('x-umami-cache'); if (cache) fwd['x-umami-cache'] = cache;
+        const ipv = request.headers.get('CF-Connecting-IP'); if (ipv) fwd['X-Forwarded-For'] = ipv;
+        const r = await fetchImpl('https://cloud.umami.is/api/send', { method: 'POST', headers: fwd, body });
+        return new Response(await r.text(), { status: r.status, headers });
+      }
       const ipSource = request.headers.get('CF-Connecting-IP');
       if (!ipSource) fail(400, 'missing_ip', '无法识别访问来源');
       const ip = hash(ipSource);

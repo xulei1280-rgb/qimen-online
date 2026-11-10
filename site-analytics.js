@@ -17,7 +17,8 @@
   } };
   if (!UMAMI_WEBSITE_ID) return;
   var script = document.createElement('script');
-  script.src = 'https://cloud.umami.is/script.js';
+  script.src = 'https://api.qimenbazi.cn/u/script.js';
+  script.setAttribute('data-host-url', 'https://api.qimenbazi.cn/u');
   script.async = true;
   script.setAttribute('data-website-id', UMAMI_WEBSITE_ID);
   script.setAttribute('data-auto-track', 'false');

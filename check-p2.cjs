@@ -26,7 +26,7 @@ async function main() {
   assert.equal(disabled.scripts.length, 0); assert.equal(disabled.sent.length, 0);
   for (const page of pages) {
     const p = load(true, page);
-    assert.equal(p.scripts.length, 1); assert.equal(p.scripts[0].src, 'https://cloud.umami.is/script.js');
+    assert.equal(p.scripts.length, 1); assert.equal(p.scripts[0].src, 'https://api.qimenbazi.cn/u/script.js');
     assert.equal(p.scripts[0].attributes['data-website-id'], 'test-website');
     assert.equal(p.scripts[0].attributes['data-auto-track'], 'false');
     for (const event of events) p.context.SiteAnalytics.track(event, { question: 'private', chart: 'private', diary: 'private', credential: 'private' });
