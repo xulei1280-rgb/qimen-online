@@ -14,9 +14,9 @@ database_id = "d60c4fee-6b2a-4fc0-8015-d3d74c18e557"
 AFDIAN_USER_ID = "ce5512ded87411f1a31d52540025c377"
 ALLOWED_ORIGIN = "https://qimenbazi.cn"
 # P1-0 实测后填写并启用，绝不猜测退款状态或付款时间字段。
-AFDIAN_VERIFIED = "false"
-AFDIAN_REFUND_STATUS = ""
-AFDIAN_PAID_AT_FIELD = ""
+AFDIAN_VERIFIED = "true"
+AFDIAN_REFUND_STATUS = "unverified_refund"
+AFDIAN_PAID_AT_FIELD = "create_time"
 
 [triggers]
 crons = ["0 19 * * *"]
