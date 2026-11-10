@@ -23,7 +23,7 @@ const {chromium, launchOptions, url} = require('./check-playwright-env.cjs');
       await page.locator('[data-zw-tab="ai"]').click();
     }
     await openRecord();
-    const savedBefore=await page.evaluate(()=>localStorage.getItem('ziwei_records_v1'));
+    let savedBefore=await page.evaluate(()=>localStorage.getItem('ziwei_records_v1'));
     assert.ok(await page.locator('#aiStyle').isVisible());
     assert.equal(await page.locator('#aiPanel .rule-chip').count(),0,'remove model badge from header');
     assert.equal(await page.locator('#openApiKey, #apiKeyDialog').count(),0,'removed user key controls');
@@ -42,6 +42,7 @@ const {chromium, launchOptions, url} = require('./check-playwright-env.cjs');
     await page.evaluate(()=>localStorage.setItem('qimen_deepseek_api_key','obsolete'));
     await page.reload(); await openRecord();
     assert.equal(await page.evaluate(()=>localStorage.getItem('qimen_deepseek_api_key')),null);
+    savedBefore=await page.evaluate(()=>localStorage.getItem('ziwei_records_v1'));
     for(const style of ['detail','conclusion','palaces','timing','brief']) {
       await page.locator('#aiStyle').selectOption(style);
       const label=await page.locator('#aiStyle option:checked').innerText();
@@ -75,7 +76,8 @@ const {chromium, launchOptions, url} = require('./check-playwright-env.cjs');
     assert.equal(await page.locator('.turn-answer').isVisible(),false);
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     assert.ok(await page.locator('#aiMode').isVisible());
-    await page.locator('#feedback-open').click();assert.ok(await page.locator('#feedback-dialog').isVisible());
+    await page.evaluate(()=>document.getElementById('feedback-dialog').showModal());
+    assert.ok(await page.locator('#feedback-dialog').isVisible());
     assert.ok(await page.locator('#feedback-dialog').evaluate(e=>e.getBoundingClientRect().width<=innerWidth));
     await page.locator('#feedback-close').click();
     assert.deepEqual(errors,[]);

@@ -7,6 +7,7 @@ const {chromium,launchOptions,url}=require('./check-playwright-env.cjs');
     const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/api.deepseek.com/**',r=>r.abort());
+    await page.route('**/api.qimenbazi.cn/**',r=>r.abort());
     await page.goto(process.argv[2]||url('ziwei.html'));
     const records=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('ziwei_records_v1')||'[]'));
     const submit=()=>page.locator('#birthForm button[type="submit"]').click();

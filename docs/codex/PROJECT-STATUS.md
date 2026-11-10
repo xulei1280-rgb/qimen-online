@@ -214,3 +214,7 @@ Caution: <known limitation or none>
 - Each module worktree commits a focused change for coordinator review.
 - Only the coordinator integrates that commit into `main`, updates this file,
   verifies the combined state, and pushes it.
+
+## 自用版并入（2026-11-10）
+
+- 八字格局复查冻结方案见 `docs/codex/modules/pattern-review-plan-v1.md`。

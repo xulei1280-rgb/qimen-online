@@ -8,6 +8,7 @@ const {chromium,launchOptions,url}=require('./check-playwright-env.cjs');
     const p=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),errors=[];
     p.on('pageerror',e=>errors.push(e.message));
     await p.route('**/api.deepseek.com/**',r=>r.abort());
+    await p.route('**/api.qimenbazi.cn/**',r=>r.abort());
     await p.goto(url('bazi.html'));
     assert.ok(await p.locator('#autoSaveBuild').isChecked());
     assert.equal(await p.locator('#useTrueSolar').isChecked(),false);
