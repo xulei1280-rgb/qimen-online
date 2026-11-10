@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const UMAMI_WEBSITE_ID = '';
+  const UMAMI_WEBSITE_ID = '16eee012-4fad-407b-b8b9-2f7c502ec88f';
   var events = ['排盘完成', 'AI 解读调用', '反馈提交', '点击打赏', '打赏建单成功', '打赏建单失败', '打赏到账'];
   var pages = ['index.html', 'bazi.html', 'liuyao.html', 'ziwei.html', 'daily.html'];
 
